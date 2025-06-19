@@ -1,0 +1,113 @@
+{
+  "name": "gg_check",
+  "latest": {
+    "version": "1.0.2",
+    "pubspec": {
+      "name": "gg_check",
+      "description": "Offers pre-commit checks like analyzing, linting, tests and coverage.",
+      "version": "1.0.2",
+      "repository": "https://github.com/inlavigo/gg_check.git",
+      "environment": { "sdk": ">=3.3.0<4.0.0" },
+      "dependencies": {
+        "args": "^2.4.2",
+        "collection": "^1.18.0",
+        "colorize": "^3.0.0",
+        "dart_ping": "^9.0.1",
+        "path": "^1.8.0",
+        "recase": "^4.1.0",
+        "yaml": "^3.1.2"
+      },
+      "dev_dependencies": {
+        "lints": "^3.0.0",
+        "pana": "^0.22.1",
+        "test": "^1.24.0"
+      }
+    },
+    "archive_url": "https://pub.dartlang.org/packages/gg_check/versions/1.0.2.tar.gz",
+    "archive_sha256": "1a46bbe9062192b2c98a7fdaa82c2e7b4576fa5ae58c50aaacc3c3d4c4f99b99",
+    "published": "2024-02-28T05:54:08.771070Z"
+  },
+  "versions": [
+    {
+      "version": "1.0.0",
+      "pubspec": {
+        "name": "gg_check",
+        "description": "Offers pre-commit checks like analyzing, linting, tests and coverage.",
+        "version": "1.0.0",
+        "repository": "https://github.com/inlavigo/gg_check.git",
+        "environment": { "sdk": ">=3.3.0<4.0.0" },
+        "dependencies": {
+          "args": "^2.4.2",
+          "collection": "^1.18.0",
+          "colorize": "^3.0.0",
+          "dart_ping": "^9.0.1",
+          "path": "^1.8.0",
+          "recase": "^4.1.0",
+          "yaml": "^3.1.2"
+        },
+        "dev_dependencies": {
+          "lints": "^3.0.0",
+          "pana": "^0.22.1",
+          "test": "^1.24.0"
+        }
+      },
+      "archive_url": "https://pub.dartlang.org/packages/gg_check/versions/1.0.0.tar.gz",
+      "archive_sha256": "d6072fbbe2acd24ffb463192929ec1a8e1841956af4a3b6a3d3529da6e05827f",
+      "published": "2024-02-24T19:18:27.039685Z"
+    },
+    {
+      "version": "1.0.1",
+      "pubspec": {
+        "name": "gg_check",
+        "description": "Offers pre-commit checks like analyzing, linting, tests and coverage.",
+        "version": "1.0.1",
+        "repository": "https://github.com/inlavigo/gg_check.git",
+        "environment": { "sdk": ">=3.3.0<4.0.0" },
+        "dependencies": {
+          "args": "^2.4.2",
+          "collection": "^1.18.0",
+          "colorize": "^3.0.0",
+          "dart_ping": "^9.0.1",
+          "path": "^1.8.0",
+          "recase": "^4.1.0",
+          "yaml": "^3.1.2"
+        },
+        "dev_dependencies": {
+          "lints": "^3.0.0",
+          "pana": "^0.22.1",
+          "test": "^1.24.0"
+        }
+      },
+      "archive_url": "https://pub.dartlang.org/packages/gg_check/versions/1.0.1.tar.gz",
+      "archive_sha256": "7b7af0170c268e34e620d59a3039eb78228bad437bd12344dd4c216ccbb69d12",
+      "published": "2024-02-26T19:47:57.154236Z"
+    },
+    {
+      "version": "1.0.2",
+      "pubspec": {
+        "name": "gg_check",
+        "description": "Offers pre-commit checks like analyzing, linting, tests and coverage.",
+        "version": "1.0.2",
+        "repository": "https://github.com/inlavigo/gg_check.git",
+        "environment": { "sdk": ">=3.3.0<4.0.0" },
+        "dependencies": {
+          "args": "^2.4.2",
+          "collection": "^1.18.0",
+          "colorize": "^3.0.0",
+          "dart_ping": "^9.0.1",
+          "path": "^1.8.0",
+          "recase": "^4.1.0",
+          "yaml": "^3.1.2"
+        },
+        "dev_dependencies": {
+          "lints": "^3.0.0",
+          "pana": "^0.22.1",
+          "test": "^1.24.0"
+        }
+      },
+      "archive_url": "https://pub.dartlang.org/packages/gg_check/versions/1.0.2.tar.gz",
+      "archive_sha256": "1a46bbe9062192b2c98a7fdaa82c2e7b4576fa5ae58c50aaacc3c3d4c4f99b99",
+      "published": "2024-02-28T05:54:08.771070Z"
+    }
+  ]
+}

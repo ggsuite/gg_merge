@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "NotFound",
+    "message": "Could not find `package \"test\"`."
+  },
+  "code": "NotFound",
+  "message": "Could not find `package \"test\"`."
+}

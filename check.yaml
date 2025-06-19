@@ -1,0 +1,9 @@
+needsInternet: true
+analyze:
+  execute: true
+format:
+  execute: true
+tests:
+  execute: true
+pana:
+  execute: false
