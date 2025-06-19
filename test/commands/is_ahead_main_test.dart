@@ -37,7 +37,7 @@ void main() {
           runInShell: any(named: 'runInShell'),
           workingDirectory: any(named: 'workingDirectory'),
         ),
-      ).thenAnswer((_) async => ProcessResult(0, 0, '1 0', ''));
+      ).thenAnswer((_) async => ProcessResult(0, 0, '0 1', ''));
       final result = await isAheadMain.exec(directory: d, ggLog: ggLog);
       expect(result, isTrue);
     });
@@ -49,7 +49,7 @@ void main() {
           runInShell: any(named: 'runInShell'),
           workingDirectory: any(named: 'workingDirectory'),
         ),
-      ).thenAnswer((_) async => ProcessResult(0, 0, '0 5', ''));
+      ).thenAnswer((_) async => ProcessResult(0, 0, '5 0', ''));
       final result = await isAheadMain.exec(directory: d, ggLog: ggLog);
       expect(result, isFalse);
     });

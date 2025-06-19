@@ -36,7 +36,7 @@ void main() {
 
     test('returns false if no git: references are found', () async {
       final pubspec = File('${d.path}/pubspec.yaml');
-      await pubspec.writeAsString('name: test\ndependencies:\n  foo: ^1.0.0');
+      await pubspec.writeAsString('name: test\ndependencies:\n  git: ^1.0.0');
       final result = await hasGitReferences.exec(directory: d, ggLog: ggLog);
       expect(result, isFalse);
     });

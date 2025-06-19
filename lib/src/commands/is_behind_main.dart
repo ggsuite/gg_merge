@@ -57,7 +57,7 @@ class IsBehindMain extends DirCommand<bool> {
     if (result.exitCode != 0) {
       throw Exception('git rev-list failed: ${result.stderr}');
     }
-    final (ahead, behind) = parseGitAheadBehind(result.stdout.toString());
+    final (behind, ahead) = parseGitAheadBehind(result.stdout.toString());
     return behind > 0;
   }
 }
