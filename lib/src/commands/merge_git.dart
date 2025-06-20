@@ -113,7 +113,7 @@ class MergeGit extends DirCommand<bool> {
         [
           'pr',
           'merge',
-          '--merge',
+          '--auto',
         ],
         runInShell: true,
         workingDirectory: directory.path,
