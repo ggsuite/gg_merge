@@ -54,7 +54,7 @@ void main() {
       when(
         () => processWrapper.run(
           'gh',
-          ['pr', 'merge', '--merge'],
+          ['pr', 'merge', '--auto'],
           runInShell: true,
           workingDirectory: d.path,
         ),
@@ -63,6 +63,7 @@ void main() {
           await mergeGit.exec(directory: d, ggLog: ggLog, automerge: true);
       expect(result, isTrue);
     });
+
     test('detects Azure and runs az repos pr create', () async {
       when(
         () => processWrapper.run(
@@ -87,6 +88,7 @@ void main() {
           await mergeGit.exec(directory: d, ggLog: ggLog, automerge: false);
       expect(result, isTrue);
     });
+
     test('throws UnimplementedError for unsupported provider', () async {
       when(
         () => processWrapper.run(
@@ -103,6 +105,7 @@ void main() {
         throwsA(isA<UnimplementedError>()),
       );
     });
+
     test('throws Exception if gh pr create fails', () async {
       when(
         () => processWrapper.run(
@@ -198,7 +201,7 @@ void main() {
       when(
         () => processWrapper.run(
           'gh',
-          ['pr', 'merge', '--merge'],
+          ['pr', 'merge', '--auto'],
           runInShell: true,
           workingDirectory: d.path,
         ),
