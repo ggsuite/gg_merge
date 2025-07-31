@@ -172,5 +172,55 @@ void main() {
         ),
       );
     });
+
+    test('throws Exception if getting current branch fails', () async {
+      when(
+        () => processWrapper.run(
+          'git',
+          ['rev-parse', '--abbrev-ref', 'HEAD'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => ProcessResult(1, 1, '', 'git error'));
+      expect(
+        () => localMerge.exec(directory: d, ggLog: ggLog),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('Failed to get current branch: git error'),
+          ),
+        ),
+      );
+    });
+
+    test('throws Exception if checkout to main fails', () async {
+      when(
+        () => processWrapper.run(
+          'git',
+          ['rev-parse', '--abbrev-ref', 'HEAD'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => ProcessResult(0, 0, 'feature', ''));
+      when(
+        () => processWrapper.run(
+          'git',
+          ['checkout', 'main'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => ProcessResult(1, 1, '', 'checkout error'));
+      expect(
+        () => localMerge.exec(directory: d, ggLog: ggLog),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('Failed to checkout main: checkout error'),
+          ),
+        ),
+      );
+    });
   });
 }
