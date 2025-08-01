@@ -139,6 +139,7 @@ void main() {
         () => localMerge.get(
           directory: any(named: 'directory'),
           ggLog: any(named: 'ggLog'),
+          message: any(named: 'message'),
         ),
       ).thenAnswer((_) async => true);
       final doMerge = DoMerge(
@@ -154,7 +155,8 @@ void main() {
       );
       expect(result, isTrue);
       verify(() => canMerge.get(directory: d, ggLog: ggLog)).called(1);
-      verify(() => localMerge.get(directory: d, ggLog: ggLog)).called(1);
+      verify(() => localMerge.get(directory: d, ggLog: ggLog, message: null))
+          .called(1);
       verifyNever(
         () => mergeGit.get(
           directory: any(named: 'directory'),
@@ -222,6 +224,116 @@ void main() {
         () => localMerge.get(
           directory: any(named: 'directory'),
           ggLog: any(named: 'ggLog'),
+          message: any(named: 'message'),
+        ),
+      );
+    });
+
+    test(
+        'calls LocalMerge with custom message when --local '
+        'and --message are provided', () async {
+      final canMerge = _MockCanMerge();
+      final mergeGit = _MockMergeGit();
+      final localMerge = _MockLocalMerge();
+      when(
+        () => canMerge.get(
+          directory: any(named: 'directory'),
+          ggLog: any(named: 'ggLog'),
+        ),
+      ).thenAnswer((_) async => true);
+      String? receivedMessage;
+      when(
+        () => localMerge.get(
+          directory: any(named: 'directory'),
+          ggLog: any(named: 'ggLog'),
+          message: any(named: 'message'),
+        ),
+      ).thenAnswer((invocation) async {
+        receivedMessage = invocation.namedArguments[#message] as String?;
+        return true;
+      });
+      final doMerge = DoMerge(
+        ggLog: ggLog,
+        canMerge: canMerge,
+        mergeGit: mergeGit,
+        localMerge: localMerge,
+      );
+      final result = await doMerge.exec(
+        directory: d,
+        ggLog: ggLog,
+        local: true,
+        message: 'Custom test message',
+      );
+      expect(result, isTrue);
+      expect(receivedMessage, 'Custom test message');
+    });
+
+    test('ignores --message when --local is false', () async {
+      final canMerge = _MockCanMerge();
+      final mergeGit = _MockMergeGit();
+      final localMerge = _MockLocalMerge();
+      when(
+        () => canMerge.get(
+          directory: any(named: 'directory'),
+          ggLog: any(named: 'ggLog'),
+        ),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mergeGit.get(
+          directory: any(named: 'directory'),
+          ggLog: any(named: 'ggLog'),
+          automerge: any(named: 'automerge'),
+        ),
+      ).thenAnswer((_) async => true);
+      final doMerge = DoMerge(
+        ggLog: ggLog,
+        canMerge: canMerge,
+        mergeGit: mergeGit,
+        localMerge: localMerge,
+      );
+      await doMerge.exec(
+        directory: d,
+        ggLog: ggLog,
+        message: 'Ignored message',
+      );
+      expect(
+        messages,
+        contains('Warning: --message is ignored for remote merges.'),
+      );
+      verify(() => mergeGit.get(directory: d, ggLog: ggLog, automerge: false))
+          .called(1);
+      verifyNever(
+        () => localMerge.get(
+          directory: any(named: 'directory'),
+          ggLog: any(named: 'ggLog'),
+        ),
+      );
+    });
+
+    test('throws if --automerge and --local with --message', () async {
+      final canMerge = _MockCanMerge();
+      final mergeGit = _MockMergeGit();
+      final localMerge = _MockLocalMerge();
+      final doMerge = DoMerge(
+        ggLog: ggLog,
+        canMerge: canMerge,
+        mergeGit: mergeGit,
+        localMerge: localMerge,
+      );
+      expect(
+        () => doMerge.exec(
+          directory: d,
+          ggLog: ggLog,
+          local: true,
+          automerge: true,
+          message: 'Some message',
+        ),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'msg',
+            contains('Automerge not supported for local merges.'),
+          ),
         ),
       );
     });

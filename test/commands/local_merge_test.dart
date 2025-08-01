@@ -51,7 +51,15 @@ void main() {
       when(
         () => processWrapper.run(
           any(),
-          ['merge', 'feature-branch', '--no-ff'],
+          ['merge', 'feature-branch', '--squash'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => ProcessResult(0, 0, '', ''));
+      when(
+        () => processWrapper.run(
+          any(),
+          ['commit', '-m', 'Merged feature-branch into main'],
           runInShell: true,
           workingDirectory: d.path,
         ),
@@ -68,6 +76,106 @@ void main() {
       final result = await localMerge.exec(directory: d, ggLog: ggLog);
       expect(result, isTrue);
       expect(messages, contains('✅ Local merge successful.'));
+    });
+
+    test('performs successful local merge with custom message', () async {
+      when(
+        () => processWrapper.run(
+          any(),
+          ['rev-parse', '--abbrev-ref', 'HEAD'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => ProcessResult(0, 0, 'feature-branch', ''));
+      when(
+        () => processWrapper.run(
+          any(),
+          ['checkout', 'main'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => ProcessResult(0, 0, '', ''));
+      when(
+        () => processWrapper.run(
+          any(),
+          ['merge', 'feature-branch', '--squash'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => ProcessResult(0, 0, '', ''));
+      when(
+        () => processWrapper.run(
+          any(),
+          ['commit', '-m', 'Custom merge message'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => ProcessResult(0, 0, '', ''));
+      when(
+        () => processWrapper.run(
+          any(),
+          ['push', 'origin', 'main'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => ProcessResult(0, 0, '', ''));
+
+      final result = await localMerge.get(
+        directory: d,
+        ggLog: ggLog,
+        message: 'Custom merge message',
+      );
+      expect(result, isTrue);
+      expect(messages, contains('✅ Local merge successful.'));
+    });
+
+    test('uses default message if no custom message provided', () async {
+      when(
+        () => processWrapper.run(
+          any(),
+          ['rev-parse', '--abbrev-ref', 'HEAD'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => ProcessResult(0, 0, 'feature-branch', ''));
+      when(
+        () => processWrapper.run(
+          any(),
+          ['checkout', 'main'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => ProcessResult(0, 0, '', ''));
+      when(
+        () => processWrapper.run(
+          any(),
+          ['merge', 'feature-branch', '--squash'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => ProcessResult(0, 0, '', ''));
+      when(
+        () => processWrapper.run(
+          any(),
+          ['commit', '-m', 'Merged feature-branch into main'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => ProcessResult(0, 0, '', ''));
+      when(
+        () => processWrapper.run(
+          any(),
+          ['push', 'origin', 'main'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => ProcessResult(0, 0, '', ''));
+
+      final result = await localMerge.get(
+        directory: d,
+        ggLog: ggLog,
+      );
+      expect(result, isTrue);
     });
 
     test('throws if already on main', () async {
@@ -111,7 +219,7 @@ void main() {
       when(
         () => processWrapper.run(
           any(),
-          ['merge', 'feature', '--no-ff'],
+          ['merge', 'feature', '--squash'],
           runInShell: true,
           workingDirectory: d.path,
         ),
@@ -123,6 +231,51 @@ void main() {
             (e) => e.toString(),
             'message',
             contains('Merge failed'),
+          ),
+        ),
+      );
+    });
+
+    test('throws on commit failure', () async {
+      when(
+        () => processWrapper.run(
+          any(),
+          ['rev-parse', '--abbrev-ref', 'HEAD'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => ProcessResult(0, 0, 'feature', ''));
+      when(
+        () => processWrapper.run(
+          any(),
+          ['checkout', 'main'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => ProcessResult(0, 0, '', ''));
+      when(
+        () => processWrapper.run(
+          any(),
+          ['merge', 'feature', '--squash'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => ProcessResult(0, 0, '', ''));
+      when(
+        () => processWrapper.run(
+          any(),
+          ['commit', '-m', 'Merged feature into main'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => ProcessResult(1, 1, '', 'commit error'));
+      expect(
+        () => localMerge.exec(directory: d, ggLog: ggLog),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('Commit failed'),
           ),
         ),
       );
@@ -148,7 +301,15 @@ void main() {
       when(
         () => processWrapper.run(
           any(),
-          ['merge', 'feature', '--no-ff'],
+          ['merge', 'feature', '--squash'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => ProcessResult(0, 0, '', ''));
+      when(
+        () => processWrapper.run(
+          any(),
+          ['commit', '-m', 'Merged feature into main'],
           runInShell: true,
           workingDirectory: d.path,
         ),

@@ -41,6 +41,7 @@ class LocalMerge extends DirCommand<bool> {
   Future<bool> get({
     required Directory directory,
     required GgLog ggLog,
+    String? message,
   }) async {
     // Get current branch
     final currentBranchResult = await _processWrapper.run(
@@ -70,15 +71,27 @@ class LocalMerge extends DirCommand<bool> {
       throw Exception('Failed to checkout main: ${checkoutResult.stderr}');
     }
 
-    // Merge current branch
+    // Merge current branch with squash
     final mergeResult = await _processWrapper.run(
       'git',
-      ['merge', currentBranch, '--no-ff'],
+      ['merge', currentBranch, '--squash'],
       runInShell: true,
       workingDirectory: directory.path,
     );
     if (mergeResult.exitCode != 0) {
       throw Exception('Merge failed: ${mergeResult.stderr}');
+    }
+
+    // Commit with provided message or default
+    final commitMessage = message ?? 'Merged $currentBranch into main';
+    final commitResult = await _processWrapper.run(
+      'git',
+      ['commit', '-m', commitMessage],
+      runInShell: true,
+      workingDirectory: directory.path,
+    );
+    if (commitResult.exitCode != 0) {
+      throw Exception('Commit failed: ${commitResult.stderr}');
     }
 
     // Push to origin/main

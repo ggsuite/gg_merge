@@ -11,3 +11,4 @@
 ### Added
 
 - add tests for local merge option
+- Add merge message for squash
