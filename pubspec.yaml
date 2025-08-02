@@ -1,6 +1,6 @@
 name: gg_merge
 description: Various tools and checks for publishing dart packages, e.g. versioning, checks etc.
-version: 1.0.1
+version: 1.0.2
 repository: https://github.com/inlavigo/gg_merge.git
 
 environment:
