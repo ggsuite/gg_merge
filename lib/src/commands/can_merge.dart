@@ -9,7 +9,6 @@ import 'package:gg_args/gg_args.dart';
 import 'package:gg_log/gg_log.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
 import 'has_local_references.dart';
-import 'has_git_references.dart';
 import 'is_behind_main.dart';
 import 'is_ahead_main.dart';
 import 'update_project_git.dart';
@@ -20,7 +19,6 @@ class CanMerge extends DirCommand<bool> {
   CanMerge({
     required super.ggLog,
     HasLocalReferences? hasLocalReferences,
-    HasGitReferences? hasGitReferences,
     IsBehindMain? isBehindMain,
     IsAheadMain? isAheadMain,
     UpdateProjectGit? updateProjectGit,
@@ -30,14 +28,12 @@ class CanMerge extends DirCommand<bool> {
     // coverage:ignore-start
   })  : _hasLocalReferences =
             hasLocalReferences ?? HasLocalReferences(ggLog: ggLog),
-        _hasGitReferences = hasGitReferences ?? HasGitReferences(ggLog: ggLog),
         _isBehindMain = isBehindMain ?? IsBehindMain(ggLog: ggLog),
         _isAheadMain = isAheadMain ?? IsAheadMain(ggLog: ggLog),
         _updateProjectGit = updateProjectGit ?? UpdateProjectGit(ggLog: ggLog);
   // coverage:ignore-end
 
   final HasLocalReferences _hasLocalReferences;
-  final HasGitReferences _hasGitReferences;
   final IsBehindMain _isBehindMain;
   final IsAheadMain _isAheadMain;
   final UpdateProjectGit _updateProjectGit;
@@ -65,9 +61,6 @@ class CanMerge extends DirCommand<bool> {
     await _updateProjectGit.get(directory: directory, ggLog: ggLog);
     if (await _hasLocalReferences.get(directory: directory, ggLog: ggLog)) {
       throw Exception('Local (path:) references found in pubspec.yaml');
-    }
-    if (await _hasGitReferences.get(directory: directory, ggLog: ggLog)) {
-      throw Exception('Git (git:) references found in pubspec.yaml');
     }
     if (await _isBehindMain.get(directory: directory, ggLog: ggLog)) {
       throw Exception(

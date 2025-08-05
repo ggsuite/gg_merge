@@ -8,7 +8,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:gg_merge/src/commands/can_merge.dart';
 import 'package:gg_merge/src/commands/has_local_references.dart';
-import 'package:gg_merge/src/commands/has_git_references.dart';
 import 'package:gg_merge/src/commands/is_behind_main.dart';
 import 'package:gg_merge/src/commands/is_ahead_main.dart';
 import 'package:gg_merge/src/commands/update_project_git.dart';
@@ -16,8 +15,6 @@ import '../helpers.dart';
 
 // Mock classes for each dependency
 class _MockHasLocalRef extends Mock implements HasLocalReferences {}
-
-class _MockHasGitRef extends Mock implements HasGitReferences {}
 
 class _MockIsBehind extends Mock implements IsBehindMain {}
 
@@ -44,7 +41,6 @@ void main() {
     test('returns true if all checks pass (ok)', () async {
       // Arrange
       final local = _MockHasLocalRef();
-      final gitRef = _MockHasGitRef();
       final behind = _MockIsBehind();
       final ahead = _MockIsAhead();
       final updGit = _MockUpdateGit();
@@ -56,12 +52,6 @@ void main() {
       ).thenAnswer((_) async => true);
       when(
         () => local.get(
-          directory: any(named: 'directory'),
-          ggLog: any(named: 'ggLog'),
-        ),
-      ).thenAnswer((_) async => false);
-      when(
-        () => gitRef.get(
           directory: any(named: 'directory'),
           ggLog: any(named: 'ggLog'),
         ),
@@ -81,7 +71,6 @@ void main() {
       final canMerge = CanMerge(
         ggLog: ggLog,
         hasLocalReferences: local,
-        hasGitReferences: gitRef,
         isBehindMain: behind,
         isAheadMain: ahead,
         updateProjectGit: updGit,
@@ -92,7 +81,6 @@ void main() {
     });
     test('throws if hasLocalReferences is true', () async {
       final local = _MockHasLocalRef();
-      final gitRef = _MockHasGitRef();
       final behind = _MockIsBehind();
       final ahead = _MockIsAhead();
       final updGit = _MockUpdateGit();
@@ -110,12 +98,6 @@ void main() {
         ),
       ).thenAnswer((_) async => true);
       when(
-        () => gitRef.get(
-          directory: any(named: 'directory'),
-          ggLog: any(named: 'ggLog'),
-        ),
-      ).thenAnswer((_) async => false);
-      when(
         () => behind.get(
           directory: any(named: 'directory'),
           ggLog: any(named: 'ggLog'),
@@ -130,7 +112,6 @@ void main() {
       final canMerge = CanMerge(
         ggLog: ggLog,
         hasLocalReferences: local,
-        hasGitReferences: gitRef,
         isBehindMain: behind,
         isAheadMain: ahead,
         updateProjectGit: updGit,
@@ -143,61 +124,8 @@ void main() {
         ),
       );
     });
-    test('throws if hasGitReferences is true', () async {
-      final local = _MockHasLocalRef();
-      final gitRef = _MockHasGitRef();
-      final behind = _MockIsBehind();
-      final ahead = _MockIsAhead();
-      final updGit = _MockUpdateGit();
-
-      when(
-        () => updGit.get(
-          directory: any(named: 'directory'),
-          ggLog: any(named: 'ggLog'),
-        ),
-      ).thenAnswer((_) async => true);
-      when(
-        () => local.get(
-          directory: any(named: 'directory'),
-          ggLog: any(named: 'ggLog'),
-        ),
-      ).thenAnswer((_) async => false);
-      when(
-        () => gitRef.get(
-          directory: any(named: 'directory'),
-          ggLog: any(named: 'ggLog'),
-        ),
-      ).thenAnswer((_) async => true);
-      when(
-        () => behind.get(
-          directory: any(named: 'directory'),
-          ggLog: any(named: 'ggLog'),
-        ),
-      ).thenAnswer((_) async => false);
-      when(
-        () => ahead.get(
-          directory: any(named: 'directory'),
-          ggLog: any(named: 'ggLog'),
-        ),
-      ).thenAnswer((_) async => true);
-      final canMerge = CanMerge(
-        ggLog: ggLog,
-        hasLocalReferences: local,
-        hasGitReferences: gitRef,
-        isBehindMain: behind,
-        isAheadMain: ahead,
-        updateProjectGit: updGit,
-      );
-      expect(
-        () => canMerge.exec(directory: d, ggLog: ggLog),
-        throwsA(
-          isA<Exception>().having((e) => e.toString(), 'msg', contains('git:')),
-        ),
-      );
-    });
     test('throws if isBehindMain is true', () async {
       final local = _MockHasLocalRef();
-      final gitRef = _MockHasGitRef();
       final behind = _MockIsBehind();
       final ahead = _MockIsAhead();
       final updGit = _MockUpdateGit();
@@ -209,12 +137,6 @@ void main() {
       ).thenAnswer((_) async => true);
       when(
         () => local.get(
-          directory: any(named: 'directory'),
-          ggLog: any(named: 'ggLog'),
-        ),
-      ).thenAnswer((_) async => false);
-      when(
-        () => gitRef.get(
           directory: any(named: 'directory'),
           ggLog: any(named: 'ggLog'),
         ),
@@ -234,7 +156,6 @@ void main() {
       final canMerge = CanMerge(
         ggLog: ggLog,
         hasLocalReferences: local,
-        hasGitReferences: gitRef,
         isBehindMain: behind,
         isAheadMain: ahead,
         updateProjectGit: updGit,
@@ -249,7 +170,6 @@ void main() {
     });
     test('throws if isAheadMain is false', () async {
       final local = _MockHasLocalRef();
-      final gitRef = _MockHasGitRef();
       final behind = _MockIsBehind();
       final ahead = _MockIsAhead();
       final updGit = _MockUpdateGit();
@@ -266,12 +186,6 @@ void main() {
         ),
       ).thenAnswer((_) async => false);
       when(
-        () => gitRef.get(
-          directory: any(named: 'directory'),
-          ggLog: any(named: 'ggLog'),
-        ),
-      ).thenAnswer((_) async => false);
-      when(
         () => behind.get(
           directory: any(named: 'directory'),
           ggLog: any(named: 'ggLog'),
@@ -286,7 +200,6 @@ void main() {
       final canMerge = CanMerge(
         ggLog: ggLog,
         hasLocalReferences: local,
-        hasGitReferences: gitRef,
         isBehindMain: behind,
         isAheadMain: ahead,
         updateProjectGit: updGit,
@@ -300,72 +213,6 @@ void main() {
             contains('nothing to merge'),
           ),
         ),
-      );
-    });
-    test('runs updateProjectGit before all other checks', () async {
-      final callOrder = <String>[];
-      final local = _MockHasLocalRef();
-      final gitRef = _MockHasGitRef();
-      final behind = _MockIsBehind();
-      final ahead = _MockIsAhead();
-      final updGit = _MockUpdateGit();
-      when(
-        () => updGit.get(
-          directory: any(named: 'directory'),
-          ggLog: any(named: 'ggLog'),
-        ),
-      ).thenAnswer((_) async {
-        callOrder.add('update');
-        return true;
-      });
-      when(
-        () => local.get(
-          directory: any(named: 'directory'),
-          ggLog: any(named: 'ggLog'),
-        ),
-      ).thenAnswer((_) async {
-        callOrder.add('local');
-        return false;
-      });
-      when(
-        () => gitRef.get(
-          directory: any(named: 'directory'),
-          ggLog: any(named: 'ggLog'),
-        ),
-      ).thenAnswer((_) async {
-        callOrder.add('git');
-        return false;
-      });
-      when(
-        () => behind.get(
-          directory: any(named: 'directory'),
-          ggLog: any(named: 'ggLog'),
-        ),
-      ).thenAnswer((_) async {
-        callOrder.add('behind');
-        return false;
-      });
-      when(
-        () => ahead.get(
-          directory: any(named: 'directory'),
-          ggLog: any(named: 'ggLog'),
-        ),
-      ).thenAnswer((_) async {
-        callOrder.add('ahead');
-        return true;
-      });
-      final canMerge = CanMerge(
-        ggLog: ggLog,
-        hasLocalReferences: local,
-        hasGitReferences: gitRef,
-        isBehindMain: behind,
-        isAheadMain: ahead,
-        updateProjectGit: updGit,
-      );
-      await canMerge.exec(directory: d, ggLog: ggLog);
-      expect(
-        callOrder,
-        containsAllInOrder(['update', 'local', 'git', 'behind', 'ahead']),
       );
     });
   });
