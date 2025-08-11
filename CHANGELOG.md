@@ -1,6 +1,12 @@
 # Changelog
 
-## [1.0.3] - 2025-08-05
+## \[Unreleased\]
+
+### Changed
+
+- Update to gg\_git 3.0.0
+
+## [1.0.3] - 2025-08-11
 
 ## [1.0.2] - 2025-08-05
 
@@ -20,5 +26,6 @@
 
 - prepare version 1.0.1
 
+[1.0.3]: https://github.com/inlavigo/gg_merge/compare/1.0.2...1.0.3
 [1.0.2]: https://github.com/inlavigo/gg_merge/compare/1.0.1...1.0.2
 [1.0.1]: https://github.com/inlavigo/gg_merge/tag/%tag
