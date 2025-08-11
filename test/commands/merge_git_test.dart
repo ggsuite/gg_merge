@@ -59,8 +59,11 @@ void main() {
           workingDirectory: d.path,
         ),
       ).thenAnswer((_) async => ProcessResult(0, 0, '', ''));
-      final result =
-          await mergeGit.exec(directory: d, ggLog: ggLog, automerge: true);
+      final result = await mergeGit.exec(
+        directory: d,
+        ggLog: ggLog,
+        automerge: true,
+      );
       expect(result, isTrue);
     });
 
@@ -84,8 +87,11 @@ void main() {
           workingDirectory: d.path,
         ),
       ).thenAnswer((_) async => ProcessResult(0, 0, '', ''));
-      final result =
-          await mergeGit.exec(directory: d, ggLog: ggLog, automerge: false);
+      final result = await mergeGit.exec(
+        directory: d,
+        ggLog: ggLog,
+        automerge: false,
+      );
       expect(result, isTrue);
     });
 

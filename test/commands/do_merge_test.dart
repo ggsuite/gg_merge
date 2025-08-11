@@ -55,12 +55,16 @@ void main() {
         canMerge: canMerge,
         mergeGit: mergeGit,
       );
-      final result =
-          await doMerge.exec(directory: d, ggLog: ggLog, automerge: true);
+      final result = await doMerge.exec(
+        directory: d,
+        ggLog: ggLog,
+        automerge: true,
+      );
       expect(result, isTrue);
       verify(() => canMerge.get(directory: d, ggLog: ggLog)).called(1);
-      verify(() => mergeGit.get(directory: d, ggLog: ggLog, automerge: true))
-          .called(1);
+      verify(
+        () => mergeGit.get(directory: d, ggLog: ggLog, automerge: true),
+      ).called(1);
       expect(messages.last, contains('Performing final merge'));
     });
     test('throws if CanMerge fails, MergeGit not called', () async {
@@ -155,8 +159,9 @@ void main() {
       );
       expect(result, isTrue);
       verify(() => canMerge.get(directory: d, ggLog: ggLog)).called(1);
-      verify(() => localMerge.get(directory: d, ggLog: ggLog, message: null))
-          .called(1);
+      verify(
+        () => localMerge.get(directory: d, ggLog: ggLog, message: null),
+      ).called(1);
       verifyNever(
         () => mergeGit.get(
           directory: any(named: 'directory'),
@@ -229,8 +234,7 @@ void main() {
       );
     });
 
-    test(
-        'calls LocalMerge with custom message when --local '
+    test('calls LocalMerge with custom message when --local '
         'and --message are provided', () async {
       final canMerge = _MockCanMerge();
       final mergeGit = _MockMergeGit();
@@ -300,8 +304,9 @@ void main() {
         messages,
         contains('Warning: --message is ignored for remote merges.'),
       );
-      verify(() => mergeGit.get(directory: d, ggLog: ggLog, automerge: false))
-          .called(1);
+      verify(
+        () => mergeGit.get(directory: d, ggLog: ggLog, automerge: false),
+      ).called(1);
       verifyNever(
         () => localMerge.get(
           directory: any(named: 'directory'),

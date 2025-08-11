@@ -19,12 +19,13 @@ class DoMerge extends DirCommand<bool> {
     MergeGit? mergeGit,
     LocalMerge? localMerge,
     super.name = 'do-merge',
-    super.description = 'Checks pre-conditions and performs merge request/PR '
+    super.description =
+        'Checks pre-conditions and performs merge request/PR '
         '(optionally with automerge) or local merge with --local.',
     // coverage:ignore-start
-  })  : _canMerge = canMerge ?? CanMerge(ggLog: ggLog),
-        _mergeGit = mergeGit ?? MergeGit(ggLog: ggLog),
-        _localMerge = localMerge ?? LocalMerge(ggLog: ggLog) {
+  }) : _canMerge = canMerge ?? CanMerge(ggLog: ggLog),
+       _mergeGit = mergeGit ?? MergeGit(ggLog: ggLog),
+       _localMerge = localMerge ?? LocalMerge(ggLog: ggLog) {
     // coverage:ignore-end
     _addArgs();
   }
@@ -81,10 +82,7 @@ class DoMerge extends DirCommand<bool> {
       ggLog('Warning: --message is ignored for remote merges.');
     }
 
-    final ok = await _canMerge.get(
-      directory: directory,
-      ggLog: ggLog,
-    );
+    final ok = await _canMerge.get(directory: directory, ggLog: ggLog);
     if (!ok) {
       throw Exception('Not allowed to merge.');
     }

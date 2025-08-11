@@ -24,8 +24,10 @@ void main() {
     setUp(() async {
       d = await Directory.systemTemp.createTemp('ggmerge_test_');
       processWrapper = MockGgProcessWrapper();
-      updateProjectGit =
-          UpdateProjectGit(ggLog: ggLog, processWrapper: processWrapper);
+      updateProjectGit = UpdateProjectGit(
+        ggLog: ggLog,
+        processWrapper: processWrapper,
+      );
       messages.clear();
     });
     tearDown(() async => d.delete(recursive: true));

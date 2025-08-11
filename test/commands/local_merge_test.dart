@@ -171,10 +171,7 @@ void main() {
         ),
       ).thenAnswer((_) async => ProcessResult(0, 0, '', ''));
 
-      final result = await localMerge.get(
-        directory: d,
-        ggLog: ggLog,
-      );
+      final result = await localMerge.get(directory: d, ggLog: ggLog);
       expect(result, isTrue);
     });
 

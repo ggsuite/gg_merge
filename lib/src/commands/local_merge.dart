@@ -17,7 +17,8 @@ class LocalMerge extends DirCommand<bool> {
     required super.ggLog,
     GgProcessWrapper processWrapper = const GgProcessWrapper(),
     super.name = 'local-merge',
-    super.description = 'Performs a local merge into '
+    super.description =
+        'Performs a local merge into '
         'main without remote providers.',
   }) : _processWrapper = processWrapper;
 

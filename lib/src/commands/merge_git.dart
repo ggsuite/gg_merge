@@ -62,9 +62,7 @@ class MergeGit extends DirCommand<bool> {
         await _createAzureDevOpsPR(directory, automerge, ggLog);
         break;
       case null:
-        throw UnimplementedError(
-          'Unsupported git provider url: $remoteUrl',
-        );
+        throw UnimplementedError('Unsupported git provider url: $remoteUrl');
     }
     return true;
   }
@@ -72,11 +70,7 @@ class MergeGit extends DirCommand<bool> {
   Future<String> _readOriginUrl(Directory directory) async {
     final result = await _processWrapper.run(
       'git',
-      [
-        'config',
-        '--get',
-        'remote.origin.url',
-      ],
+      ['config', '--get', 'remote.origin.url'],
       runInShell: true,
       workingDirectory: directory.path,
     );
@@ -94,12 +88,7 @@ class MergeGit extends DirCommand<bool> {
     // Create PR
     final result = await _processWrapper.run(
       'gh',
-      [
-        'pr',
-        'create',
-        '--fill',
-        '--web=false',
-      ],
+      ['pr', 'create', '--fill', '--web=false'],
       runInShell: true,
       workingDirectory: directory.path,
     );
@@ -110,11 +99,7 @@ class MergeGit extends DirCommand<bool> {
     if (automerge) {
       final mergeResult = await _processWrapper.run(
         'gh',
-        [
-          'pr',
-          'merge',
-          '--auto',
-        ],
+        ['pr', 'merge', '--auto'],
         runInShell: true,
         workingDirectory: directory.path,
       );

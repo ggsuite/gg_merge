@@ -4,25 +4,25 @@ version: 1.2.3
 repository: https://github.com/inlavigo/gg_check.git
 
 environment:
-  sdk: ">=3.3.0 <4.0.0"
+  sdk: ">=3.8.0 <4.0.0"
 
 dependencies:
   args: ^2.4.2
-  gg_args: ^1.0.3
-  gg_console_colors: ^1.0.0
-  gg_git: ^1.0.3
+  gg_args: ^2.0.4
+  gg_console_colors: ^2.1.5
+  gg_git: ^3.0.2
   gg_is_github: ^1.0.0
   gg_parse_stdout: ^1.0.0
   gg_process: ^1.0.6
   gg_status_printer: ^1.0.1
   gg_test: ^1.0.0
-  gg_version: 1.2.3
+  gg_version: ^4.0.4
   mocktail: ^1.0.3
   path: ^1.8.0
   recase: any
 
 dev_dependencies:
   gg_capture_print: ^1.0.3
-  lints: ^3.0.0
+  lints: ^5.1.1
   pana: ^0.22.2
   test: ^1.24.0

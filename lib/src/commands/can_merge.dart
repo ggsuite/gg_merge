@@ -26,11 +26,11 @@ class CanMerge extends DirCommand<bool> {
     super.description =
         'Checks if merge to main is allowed according to rules.',
     // coverage:ignore-start
-  })  : _hasLocalReferences =
-            hasLocalReferences ?? HasLocalReferences(ggLog: ggLog),
-        _isBehindMain = isBehindMain ?? IsBehindMain(ggLog: ggLog),
-        _isAheadMain = isAheadMain ?? IsAheadMain(ggLog: ggLog),
-        _updateProjectGit = updateProjectGit ?? UpdateProjectGit(ggLog: ggLog);
+  }) : _hasLocalReferences =
+           hasLocalReferences ?? HasLocalReferences(ggLog: ggLog),
+       _isBehindMain = isBehindMain ?? IsBehindMain(ggLog: ggLog),
+       _isAheadMain = isAheadMain ?? IsAheadMain(ggLog: ggLog),
+       _updateProjectGit = updateProjectGit ?? UpdateProjectGit(ggLog: ggLog);
   // coverage:ignore-end
 
   final HasLocalReferences _hasLocalReferences;
@@ -54,10 +54,7 @@ class CanMerge extends DirCommand<bool> {
 
   /// Returns true iff all merge pre-conditions are met.
   @override
-  Future<bool> get({
-    required Directory directory,
-    required GgLog ggLog,
-  }) async {
+  Future<bool> get({required Directory directory, required GgLog ggLog}) async {
     await _updateProjectGit.get(directory: directory, ggLog: ggLog);
     if (await _hasLocalReferences.get(directory: directory, ggLog: ggLog)) {
       throw Exception('Local (path:) references found in pubspec.yaml');

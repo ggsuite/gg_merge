@@ -4,19 +4,19 @@ version: 1.0.4
 repository: https://github.com/inlavigo/gg_merge.git
 
 environment:
-  sdk: ">=3.3.0 <4.0.0"
+  sdk: ">=3.8.0 <4.0.0"
 
 dependencies:
   args: ^2.4.2
-  
+
   gg_args: ^2.0.1
   gg_console_colors: ^2.0.1
   gg_git: ^3.0.0
   gg_is_flutter: ^1.0.6
   gg_log: ^1.0.0
   gg_process: ^1.0.7
-  gg_status_printer: ^1.0.7  
-  
+  gg_status_printer: ^1.0.7
+
   http: ^1.2.1
   matcher: ^0.12.16+1
   mocktail: ^1.0.3

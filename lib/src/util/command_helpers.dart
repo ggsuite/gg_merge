@@ -22,7 +22,7 @@ enum GitProvider {
   github,
 
   /// Azure DevOps provider.
-  azure
+  azure,
 }
 
 /// Determines the provider from the remote.origin.url

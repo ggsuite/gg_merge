@@ -38,10 +38,7 @@ class UpdateProjectGit extends DirCommand<bool> {
 
   /// Runs git fetch --all -p and git pull --all, returns true iff all succeed
   @override
-  Future<bool> get({
-    required Directory directory,
-    required GgLog ggLog,
-  }) async {
+  Future<bool> get({required Directory directory, required GgLog ggLog}) async {
     final result1 = await _processWrapper.run(
       'git',
       ['fetch', '--all', '-p'],

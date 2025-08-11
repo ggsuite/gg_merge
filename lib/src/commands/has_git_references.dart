@@ -16,7 +16,8 @@ class HasGitReferences extends DirCommand<bool> {
   HasGitReferences({
     required super.ggLog,
     super.name = 'has-git-references',
-    super.description = 'Checks whether pubspec.yaml '
+    super.description =
+        'Checks whether pubspec.yaml '
         'contains git: references for dependencies.',
   });
 
@@ -36,10 +37,7 @@ class HasGitReferences extends DirCommand<bool> {
 
   /// Returns true if pubspec.yaml contains at least one git: reference.
   @override
-  Future<bool> get({
-    required Directory directory,
-    required GgLog ggLog,
-  }) async {
+  Future<bool> get({required Directory directory, required GgLog ggLog}) async {
     final pubspecFile = File('${directory.path}/pubspec.yaml');
     if (!pubspecFile.existsSync()) {
       throw ArgumentError('pubspec.yaml not found');
@@ -48,14 +46,11 @@ class HasGitReferences extends DirCommand<bool> {
     final pubspecYaml = loadYaml(pubspecContent) as YamlMap;
     final deps =
         (pubspecYaml['dependencies'] as Map?)?.cast<String, dynamic>() ??
-            <String, dynamic>{};
+        <String, dynamic>{};
     final devDeps =
         (pubspecYaml['dev_dependencies'] as Map?)?.cast<String, dynamic>() ??
-            <String, dynamic>{};
-    final checks = <String, dynamic>{
-      ...deps,
-      ...devDeps,
-    };
+        <String, dynamic>{};
+    final checks = <String, dynamic>{...deps, ...devDeps};
     for (final value in checks.values) {
       if (value is Map && value['git'] != null) {
         return true;

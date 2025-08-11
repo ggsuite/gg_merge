@@ -119,8 +119,11 @@ void main() {
       expect(
         () => canMerge.exec(directory: d, ggLog: ggLog),
         throwsA(
-          isA<Exception>()
-              .having((e) => e.toString(), 'msg', contains('path:')),
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'msg',
+            contains('path:'),
+          ),
         ),
       );
     });
@@ -163,8 +166,11 @@ void main() {
       expect(
         () => canMerge.exec(directory: d, ggLog: ggLog),
         throwsA(
-          isA<Exception>()
-              .having((e) => e.toString(), 'msg', contains('behind main')),
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'msg',
+            contains('behind main'),
+          ),
         ),
       );
     });

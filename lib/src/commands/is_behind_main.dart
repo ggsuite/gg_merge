@@ -39,18 +39,10 @@ class IsBehindMain extends DirCommand<bool> {
 
   /// Returns true if the current branch is behind main (B > 0)
   @override
-  Future<bool> get({
-    required Directory directory,
-    required GgLog ggLog,
-  }) async {
+  Future<bool> get({required Directory directory, required GgLog ggLog}) async {
     final result = await _processWrapper.run(
       'git',
-      [
-        'rev-list',
-        '--left-right',
-        '--count',
-        'origin/main...HEAD',
-      ],
+      ['rev-list', '--left-right', '--count', 'origin/main...HEAD'],
       runInShell: true,
       workingDirectory: directory.path,
     );
