@@ -1,7 +1,497 @@
 {
-  "dartImport.fixOnSave": true,
-  "editor.formatOnSave": true,
+  // ##############
+  // Vscode Editor
+  // ##############
+
+  "files.exclude": {
+    "**/.idea": true,
+    "**/.symlinks": true,
+    "**/build": true
+  },
+
+  "editor.tabSize": 2,
   "editor.codeActionsOnSave": {
-    "source.fixAll": "explicit"
-  }
+    "source.fixAll": "always",
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "always"
+  },
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.rulers": [80],
+  "editor.wordWrapColumn": 80,
+  "editor.formatOnType": true,
+  "editor.detectIndentation": false,
+  "editor.renderWhitespace": "none",
+  "files.trimTrailingWhitespace": true,
+
+  "files.autoGuessEncoding": true,
+  "files.insertFinalNewline": true,
+  "editor.bracketPairColorization.independentColorPoolPerBracketType": true,
+  "editor.smoothScrolling": true,
+
+  "editor.rename.enablePreview": false,
+  "editor.formatOnPaste": true,
+  "editor.unicodeHighlight.nonBasicASCII": false,
+  "editor.largeFileOptimizations": false,
+  "workbench.editor.enablePreview": false,
+
+  // ##############
+  // Copilot
+  // ##############
+
+  "github.copilot.enable": {
+    "*": true,
+    "plaintext": false,
+    "markdown": false,
+    "scminput": false
+  },
+
+  // ##############
+  // Git Editor
+  // ##############
+
+  "diffEditor.ignoreTrimWhitespace": false,
+
+  // ##############
+  // Explorer
+  // ##############
+
+  "explorer.confirmDelete": true,
+
+  // ##############
+  // Problems Tab
+  // ##############
+
+  "problems.autoReveal": false,
+
+  // ##############
+  // Debug Tab
+  // ##############
+
+  "debug.console.collapseIdenticalLines": false,
+
+  // #############
+  // Testing
+  // #############
+
+  "testing.defaultGutterClickAction": "run",
+  "testing.automaticallyOpenPeekView": "never",
+  "testing.automaticallyOpenTestResults": "neverOpen",
+  "karmaTestExplorer.karmaLogLevel": "debug",
+  "karmaTestExplorer.projectType": "angular",
+  "karmaTestExplorer.nonHeadlessModeEnabled": false,
+  "karmaTestExplorer.browser": "ChromeHeadlessWithWebGl",
+  "karmaTestExplorer.failOnStandardError": true,
+  "karmaTestExplorer.testGrouping": "folder",
+  "karmaTestExplorer.autoWatchEnabled": false,
+  "testExplorer.codeLens": true,
+  "testExplorer.useNativeTesting": false, // Currently (2024/12) Karma Test Runner does not work with native testing.
+
+  // #############
+  // Code Coverage
+  // #############
+
+  "coverage-gutters.showGutterCoverage": false,
+  "testing.coverageToolbarEnabled": true,
+  "testing.coverageBarThresholds": {
+    "red": 0,
+    "yellow": 99,
+    "green": 100
+  },
+  "coverage-gutters.coverageBaseDir": "coverage/**",
+  "coverage-gutters.showLineCoverage": true,
+  "coverage-gutters.showRulerCoverage": true,
+  "debug.inlineValues": "on",
+
+  // #############
+  // Search
+  // #############
+  "search.exclude": {
+    "**/.dart_tool": true,
+    "**/.idea": true,
+    "**/.symlinks": true,
+    "**/*.o": true,
+    "**/*.symlinks": true
+  },
+
+  "search.useReplacePreview": false,
+
+  // #############
+  // HTML
+  // #############
+  "html.format.wrapLineLength": 80,
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  // #############
+  // Javascript
+  // #############
+
+  "javascript.preferences.quoteStyle": "single",
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "javascript.referencesCodeLens.enabled": true,
+
+  // #############
+  // Typescript
+  // #############
+
+  "typescript.tsserver.watchOptions": "vscode",
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "typescript.referencesCodeLens.enabled": true,
+
+  // #############
+  // Eslint
+  // #############
+
+  "eslint.codeActionsOnSave.mode": "all",
+  "eslint.run": "onType",
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact",
+    "javascript",
+    "html"
+  ],
+
+  // #############
+  // Python
+  // #############
+
+  "python.pythonPath": "python2",
+  "python.autoComplete.extraPaths": ["./path-to-your-code"],
+  "python.analysis.extraPaths": ["./path-to-your-code"],
+
+  // #############
+  // SVG
+  // #############
+
+  "[svg]": {
+    "editor.defaultFormatter": "jock.svg"
+  },
+  "svg.preview.mode": "svg",
+
+  // #############
+  // XML
+  // #############
+
+  "[xml]": {
+    "editor.defaultFormatter": "DotJoshJohnson.xml"
+  },
+
+  // #############
+  // Import Sorter
+  // #############
+
+  "importSorter.generalConfiguration.sortOnBeforeSave": true,
+  "importSorter.importStringConfiguration.maximumNumberOfImportExpressionsPerLine.count": 100,
+  "importSorter.importStringConfiguration.numberOfEmptyLinesAfterAllImports": 2,
+  "importSorter.importStringConfiguration.tabSize": 2,
+  "importSorter.sortConfiguration.customOrderingRules.defaultOrderLevel": 15,
+  "importSorter.sortConfiguration.removeUnusedDefaultImports": true,
+  "importSorter.sortConfiguration.removeUnusedImports": true,
+  "importSorter.sortConfiguration.customOrderingRules.rules": [
+    {
+      "regex": "^.*zone.js",
+      "orderLevel": 5
+    },
+    {
+      "regex": "^.*[@]angular",
+      "orderLevel": 10
+    },
+    {
+      "regex": "^.*tinymce/tinymce.min",
+      "orderLevel": 14
+    },
+    {
+      "regex": "^.*tinymce",
+      "orderLevel": 15
+    },
+    {
+      "regex": "^\\w+",
+      "orderLevel": 20
+    },
+    {
+      "regex": "^.*[@]inl",
+      "orderLevel": 60
+    },
+    {
+      "regex": "^.*[@]sy",
+      "orderLevel": 65
+    },
+    {
+      "regex": "^\\.\\./\\.\\./",
+      "orderLevel": 70
+    },
+    {
+      "regex": "^\\.\\.",
+      "orderLevel": 80
+    },
+    {
+      "regex": "^\\.",
+      "orderLevel": 90
+    }
+  ],
+  // #############
+  // Markdown
+  // #############
+
+  "markdownlint.run": "onSave",
+  "markdown.extension.toc.omittedFromToc": {
+    "README.md": ["## Content"]
+  },
+  // #############
+  // Dart
+  // #############
+
+  "dart.debugExternalLibraries": false,
+  "dart.sdkPath": "/Users/gatzsche/dev/flutter/bin/cache/dart-sdk",
+  "dart.warnWhenEditingFilesOutsideWorkspace": false,
+  "dart.analyzerLogFile": "~/tmp/analyzer.txt",
+  "[dart]": {
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "editor.rulers": [80],
+    "editor.selectionHighlight": false,
+    "editor.suggest.snippetsPreventQuickSuggestions": false,
+    "editor.suggestSelection": "first",
+    "editor.tabCompletion": "onlySnippets",
+    "editor.wordBasedSuggestions": "off",
+    "editor.defaultFormatter": "Dart-Code.dart-code"
+  },
+
+  "dartImport.fixOnSave": true,
+  "dartImport.showErrorMessages": false,
+  "dart.renameFilesWithClasses": "always",
+  "dart.previewCommitCharacters": true,
+
+  "dart.openTestView": [
+    "testFailure"
+    // "testRunStart"
+  ],
+
+  "dart.cliConsole": "terminal",
+  "[dot]": {
+    "editor.defaultFormatter": "tintinweb.graphviz-interactive-preview"
+  },
+
+  "dart.flutterGenerateLocalizationsOnSave": "all",
+  "dart.promptToGetPackages": false,
+  "dart.showTodos": false,
+  "dart.debugSdkLibraries": true,
+  "dart.debugExternalPackageLibraries": true,
+  "dart.openDevTools": "flutter",
+
+  // #############
+  // PSI Header
+  // #############
+
+  "psi-header.variables": [["author", "Dr. Gabriel Gatzsche"]],
+
+  "markdown.extension.toc.levels": "2..3",
+  // ###########
+  // Spell Right
+  // ###########
+
+  "spellright.language": ["en", "de"],
+  "spellright.languageContext": {
+    "strings": ["en-US", "de"],
+    "comments": ["en-US", "de"]
+  },
+  "spellright.documentTypes": ["latex", "plaintext", "markdown"],
+
+  // ###########
+  // Git
+  // ###########
+
+  "git.ignoreLimitWarning": true,
+  "git.autoRepositoryDetection": false,
+  "git.enableSmartCommit": true,
+  "git.autofetch": true,
+  "gitlens.blame.highlight.locations": ["gutter", "overview"],
+  "git.openRepositoryInParentFolders": "never",
+  "git.confirmSync": false,
+
+  // ###########
+  // cmake
+  // ###########
+
+  "cmake.configureOnOpen": false,
+
+  // ###########
+  // terminal
+  // ###########
+
+  "terminal.integrated.env.osx": {
+    "TEST": "Hallo Welt"
+  },
+  // ###########
+  // explorer
+  // ###########
+
+  "explorer.confirmDragAndDrop": false,
+
+  // ###########
+  // security
+  // ###########
+
+  "security.workspace.trust.untrustedFiles": "open",
+
+  // ###########
+  // Markdown
+  // ###########
+
+  "[markdown]": {},
+
+  // ###########
+  // DeepL
+  // ###########
+
+  "deepl.preserveFormatting": true,
+
+  // ###########
+  // CodeLens
+  // ###########
+
+  "references.preferredLocation": "view",
+
+  // Psi Header Config
+
+  "psi-header.templates": [
+    {
+      "language": "*",
+      "template": []
+    },
+    {
+      "language": "xml",
+      "template": [
+        "@license",
+        "Copyright (c) <<year>> Dr. Gabriel Gatzsche",
+        "",
+        "Use of this source code is governed by terms that can be",
+        "found in the LICENSE file in the root of this package."
+      ]
+    },
+    {
+      "language": "html",
+      "template": [
+        "@license",
+        "Copyright (c) <<year>> Dr. Gabriel Gatzsche",
+        "",
+        "Use of this source code is governed by terms that can be",
+        "found in the LICENSE file in the root of this package."
+      ]
+    },
+    {
+      "language": "typescript",
+      "template": [
+        "@license",
+        "Copyright (c) <<year>> Dr. Gabriel Gatzsche",
+        "",
+        "Use of this source code is governed by terms that can be",
+        "found in the LICENSE file in the root of this package."
+      ]
+    },
+    {
+      "language": "javascript",
+      "template": [
+        "@license",
+        "Copyright (c) <<year>> Dr. Gabriel Gatzsche",
+        "",
+        "Use of this source code is governed by terms that can be",
+        "found in the LICENSE file in the root of this package."
+      ]
+    },
+    {
+      "language": "scss",
+      "template": [
+        "@license",
+        "Copyright (c) <<year>> Dr. Gabriel Gatzsche",
+        "",
+        "Use of this source code is governed by terms that can be",
+        "found in the LICENSE file in the root of this package."
+      ]
+    },
+    {
+      "language": "dart",
+      "template": [
+        "@license",
+        "Copyright (c) <<year>> Dr. Gabriel Gatzsche",
+        "",
+        "Use of this source code is governed by terms that can be",
+        "found in the LICENSE file in the root of this package."
+      ]
+    }
+  ],
+
+  "psi-header.lang-config": [
+    {
+      "language": "json",
+      "begin": "",
+      "prefix": "",
+      "suffix": "",
+      "end": "",
+      "lineLength": 80,
+      "beforeHeader": [],
+      "afterHeader": []
+    },
+    {
+      "language": "xml",
+      "begin": "<!--",
+      "prefix": "  ",
+      "suffix": "",
+      "lineLength": 80,
+      "end": " -->",
+      "forceToTop": true,
+      "blankLinesAfter": 1,
+      "beforeHeader": [],
+      "afterHeader": []
+    },
+    {
+      "language": "html",
+      "begin": "<!--",
+      "end": "-->"
+    },
+    {
+      "language": "typescript",
+      "prefix": "// ",
+      "begin": "",
+      "end": ""
+    },
+    {
+      "language": "scss",
+      "prefix": "// ",
+      "begin": "",
+      "end": ""
+    },
+    {
+      "language": "markdown",
+      "prefix": "",
+      "begin": "<!--",
+      "end": "-->"
+    },
+    {
+      "language": "md",
+      "prefix": "",
+      "begin": "<!--",
+      "end": "-->"
+    },
+    {
+      "language": "dart",
+      "prefix": "// ",
+      "begin": "",
+      "end": ""
+    }
+  ],
+
+  "psi-header.changes-tracking": {
+    "isActive": false,
+    "autoHeader": "autoSave",
+    "enforceHeader": false
+  },
+  "psi-header.config": {
+    "forceToTop": true
+  },
+  "dart.analyzeAngularTemplates": false,
+  "html.format.enable": true
 }
