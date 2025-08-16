@@ -6,6 +6,10 @@
 
 - Add .gitattributes file
 
+### Changed
+
+- kidney: changed references to git
+
 ## [1.0.3] - 2025-08-11
 
 - Update to gg\_git 3.0.0
