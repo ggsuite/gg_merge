@@ -6,6 +6,10 @@
 
 - Add .gitattributes file
 
+### Removed
+
+- Remove push to origin/main from local merge and related test
+
 ## [1.0.3] - 2025-08-11
 
 - Update to gg\_git 3.0.0
