@@ -1,10 +1,14 @@
 # Changelog
 
-## [Unreleased]
+## [1.0.4] - 2026-03-26
 
 ### Added
 
 - Add .gitattributes file
+
+### Removed
+
+- Remove push to origin/main from local merge and related test
 
 ## [1.0.3] - 2025-08-11
 
@@ -28,7 +32,7 @@
 
 - prepare version 1.0.1
 
-[Unreleased]: https://github.com/inlavigo/gg_merge/compare/1.0.3...HEAD
+[1.0.4]: https://github.com/inlavigo/gg_merge/compare/1.0.3...1.0.4
 [1.0.3]: https://github.com/inlavigo/gg_merge/compare/1.0.2...1.0.3
 [1.0.2]: https://github.com/inlavigo/gg_merge/compare/1.0.1...1.0.2
 [1.0.1]: https://github.com/inlavigo/gg_merge/tag/%tag

@@ -5,10 +5,11 @@
 // found in the LICENSE file in the root of this package.
 
 import 'dart:io';
+
 import 'package:gg_args/gg_args.dart';
 import 'package:gg_log/gg_log.dart';
-import 'package:gg_status_printer/gg_status_printer.dart';
 import 'package:gg_process/gg_process.dart';
+import 'package:gg_status_printer/gg_status_printer.dart';
 
 /// Performs a local merge into main without remote providers.
 class LocalMerge extends DirCommand<bool> {
@@ -93,17 +94,6 @@ class LocalMerge extends DirCommand<bool> {
     );
     if (commitResult.exitCode != 0) {
       throw Exception('Commit failed: ${commitResult.stderr}');
-    }
-
-    // Push to origin/main
-    final pushResult = await _processWrapper.run(
-      'git',
-      ['push', 'origin', 'main'],
-      runInShell: true,
-      workingDirectory: directory.path,
-    );
-    if (pushResult.exitCode != 0) {
-      throw Exception('Push failed: ${pushResult.stderr}');
     }
 
     ggLog('✅ Local merge successful.');

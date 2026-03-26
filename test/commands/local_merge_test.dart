@@ -5,9 +5,11 @@
 // found in the LICENSE file in the root of this package.
 
 import 'dart:io';
+
+import 'package:gg_merge/src/commands/local_merge.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
-import 'package:gg_merge/src/commands/local_merge.dart';
+
 import '../helpers.dart';
 
 void main() {
@@ -273,59 +275,6 @@ void main() {
             (e) => e.toString(),
             'message',
             contains('Commit failed'),
-          ),
-        ),
-      );
-    });
-
-    test('throws on push failure', () async {
-      when(
-        () => processWrapper.run(
-          any(),
-          ['rev-parse', '--abbrev-ref', 'HEAD'],
-          runInShell: true,
-          workingDirectory: d.path,
-        ),
-      ).thenAnswer((_) async => ProcessResult(0, 0, 'feature', ''));
-      when(
-        () => processWrapper.run(
-          any(),
-          ['checkout', 'main'],
-          runInShell: true,
-          workingDirectory: d.path,
-        ),
-      ).thenAnswer((_) async => ProcessResult(0, 0, '', ''));
-      when(
-        () => processWrapper.run(
-          any(),
-          ['merge', 'feature', '--squash'],
-          runInShell: true,
-          workingDirectory: d.path,
-        ),
-      ).thenAnswer((_) async => ProcessResult(0, 0, '', ''));
-      when(
-        () => processWrapper.run(
-          any(),
-          ['commit', '-m', 'Merged feature into main'],
-          runInShell: true,
-          workingDirectory: d.path,
-        ),
-      ).thenAnswer((_) async => ProcessResult(0, 0, '', ''));
-      when(
-        () => processWrapper.run(
-          any(),
-          ['push', 'origin', 'main'],
-          runInShell: true,
-          workingDirectory: d.path,
-        ),
-      ).thenAnswer((_) async => ProcessResult(1, 1, '', 'push error'));
-      expect(
-        () => localMerge.exec(directory: d, ggLog: ggLog),
-        throwsA(
-          isA<Exception>().having(
-            (e) => e.toString(),
-            'message',
-            contains('Push failed'),
           ),
         ),
       );
