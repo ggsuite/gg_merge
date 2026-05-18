@@ -1,6 +1,7 @@
 name: gg_merge
 description: Various tools and checks for publishing dart packages, e.g. versioning, checks etc.
 version: 1.0.4
+publish_to: none
 repository: https://github.com/inlavigo/gg_merge.git
 
 environment:
@@ -9,10 +10,13 @@ environment:
 dependencies:
   args: ^2.4.2
 
-  gg_args: ^2.0.1
+  gg_args:
+    path: ../gg_args # ^2.0.1
   gg_console_colors: ^2.0.1
-  gg_git: ^3.0.0
-  gg_is_flutter: ^1.0.6
+  gg_git:
+    path: ../gg_git # ^3.0.0
+  gg_is_flutter:
+    path: ../gg_is_flutter # ^1.0.6
   gg_log: ^1.0.0
   gg_process: ^1.0.7
   gg_status_printer: ^1.0.7
