@@ -37,6 +37,7 @@ class DoMerge extends DirCommand<bool> {
   String? get _messageOption => argResults?['message'] as String?;
   bool get _automergeOption => argResults?['automerge'] as bool? ?? false;
   bool get _localOption => argResults?['local'] as bool? ?? false;
+  bool get _verboseOption => argResults?['verbose'] as bool? ?? false;
 
   @override
   Future<bool> exec({
@@ -45,6 +46,7 @@ class DoMerge extends DirCommand<bool> {
     bool? automerge,
     bool? local,
     String? message,
+    bool? verbose,
   }) async {
     return await GgStatusPrinter<bool>(
       message: 'Performing final merge.',
@@ -56,6 +58,7 @@ class DoMerge extends DirCommand<bool> {
         automerge: automerge,
         local: local,
         message: message,
+        verbose: verbose,
       ),
       success: (v) => v,
     );
@@ -69,10 +72,12 @@ class DoMerge extends DirCommand<bool> {
     bool? automerge,
     bool? local,
     String? message,
+    bool? verbose,
   }) async {
     automerge ??= _automergeOption;
     local ??= _localOption;
     message ??= _messageOption;
+    verbose ??= _verboseOption;
 
     if (local && automerge) {
       throw Exception('Automerge not supported for local merges.');
@@ -92,6 +97,7 @@ class DoMerge extends DirCommand<bool> {
         directory: directory,
         ggLog: ggLog,
         message: message,
+        verbose: verbose,
       );
       ggLog('✅ Local merge operation successfully completed.');
     } else {
@@ -124,6 +130,13 @@ class DoMerge extends DirCommand<bool> {
       'message',
       abbr: 'm',
       help: 'Custom commit message for local squash merges.',
+    );
+    argParser.addFlag(
+      'verbose',
+      abbr: 'v',
+      help: 'Prints each executed command before running it.',
+      defaultsTo: false,
+      negatable: false,
     );
   }
 }

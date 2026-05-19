@@ -7,7 +7,6 @@
 import 'dart:io';
 
 import 'package:gg_args/gg_args.dart';
-import 'package:gg_is_flutter/gg_is_flutter.dart';
 import 'package:gg_log/gg_log.dart';
 import 'package:gg_process/gg_process.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
@@ -18,16 +17,15 @@ class LocalMerge extends DirCommand<bool> {
   LocalMerge({
     required super.ggLog,
     GgProcessWrapper processWrapper = const GgProcessWrapper(),
-    bool runPubGet = true,
     super.name = 'local-merge',
     super.description =
         'Performs a local merge into '
         'main without remote providers.',
-  }) : _processWrapper = processWrapper,
-       _runPubGet = runPubGet;
+  }) : _processWrapper = processWrapper {
+    _addArgs();
+  }
 
   final GgProcessWrapper _processWrapper;
-  final bool _runPubGet;
 
   @override
   Future<bool> exec({
@@ -48,13 +46,17 @@ class LocalMerge extends DirCommand<bool> {
     required Directory directory,
     required GgLog ggLog,
     String? message,
+    bool? verbose,
   }) async {
+    final isVerbose = verbose ?? _verboseFromArgs;
+
     // Get current branch
-    final currentBranchResult = await _processWrapper.run(
+    final currentBranchResult = await _run(
       'git',
       ['rev-parse', '--abbrev-ref', 'HEAD'],
-      runInShell: true,
-      workingDirectory: directory.path,
+      directory: directory,
+      ggLog: ggLog,
+      verbose: isVerbose,
     );
     if (currentBranchResult.exitCode != 0) {
       throw Exception(
@@ -67,65 +69,37 @@ class LocalMerge extends DirCommand<bool> {
     }
 
     // Checkout main
-    final checkoutResult = await _processWrapper.run(
+    final checkoutResult = await _run(
       'git',
       ['checkout', 'main'],
-      runInShell: true,
-      workingDirectory: directory.path,
+      directory: directory,
+      ggLog: ggLog,
+      verbose: isVerbose,
     );
     if (checkoutResult.exitCode != 0) {
       throw Exception('Failed to checkout main: ${checkoutResult.stderr}');
     }
 
     // Merge current branch with squash
-    final mergeResult = await _processWrapper.run(
+    final mergeResult = await _run(
       'git',
       ['merge', currentBranch, '--squash'],
-      runInShell: true,
-      workingDirectory: directory.path,
+      directory: directory,
+      ggLog: ggLog,
+      verbose: isVerbose,
     );
     if (mergeResult.exitCode != 0) {
       throw Exception('Merge failed: ${mergeResult.stderr}');
     }
 
-    if (_runPubGet) {
-      // Run pub get so pubspec.lock is up-to-date before the squash commit.
-      // Otherwise VS Code's auto pub get races the commit and leaves
-      // pubspec.lock dirty afterwards.
-      final pubExecutable = isFlutterDir(directory) ? 'flutter' : 'dart';
-      final pubGetResult = await _processWrapper.run(
-        pubExecutable,
-        ['pub', 'get'],
-        runInShell: true,
-        workingDirectory: directory.path,
-      );
-      if (pubGetResult.exitCode != 0) {
-        throw Exception(
-          '$pubExecutable pub get failed: ${pubGetResult.stderr}',
-        );
-      }
-
-      // Stage pubspec.lock so its update is part of the squash commit.
-      final addLockResult = await _processWrapper.run(
-        'git',
-        ['add', 'pubspec.lock'],
-        runInShell: true,
-        workingDirectory: directory.path,
-      );
-      if (addLockResult.exitCode != 0) {
-        throw Exception(
-          'Failed to stage pubspec.lock: ${addLockResult.stderr}',
-        );
-      }
-    }
-
     // Commit with provided message or default
     final commitMessage = message ?? 'Merged $currentBranch into main';
-    final commitResult = await _processWrapper.run(
+    final commitResult = await _run(
       'git',
       ['commit', '-m', commitMessage],
-      runInShell: true,
-      workingDirectory: directory.path,
+      directory: directory,
+      ggLog: ggLog,
+      verbose: isVerbose,
     );
     if (commitResult.exitCode != 0) {
       throw Exception('Commit failed: ${commitResult.stderr}');
@@ -133,6 +107,37 @@ class LocalMerge extends DirCommand<bool> {
 
     ggLog('✅ Local merge successful.');
     return true;
+  }
+
+  // ...........................................................................
+  void _addArgs() {
+    argParser.addFlag(
+      'verbose',
+      abbr: 'v',
+      help: 'Prints each executed command before running it.',
+      defaultsTo: false,
+      negatable: false,
+    );
+  }
+
+  bool get _verboseFromArgs => argResults?['verbose'] as bool? ?? false;
+
+  Future<ProcessResult> _run(
+    String executable,
+    List<String> arguments, {
+    required Directory directory,
+    required GgLog ggLog,
+    required bool verbose,
+  }) {
+    if (verbose) {
+      ggLog('\$ $executable ${arguments.join(' ')}');
+    }
+    return _processWrapper.run(
+      executable,
+      arguments,
+      runInShell: true,
+      workingDirectory: directory.path,
+    );
   }
 }
 

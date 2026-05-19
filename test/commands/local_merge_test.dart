@@ -6,12 +6,14 @@
 
 import 'dart:io';
 
-import 'package:gg_is_flutter/gg_is_flutter.dart';
+import 'package:args/command_runner.dart';
 import 'package:gg_merge/src/commands/local_merge.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 
 import '../helpers.dart';
+
+// ignore_for_file: unused_import
 
 void main() {
   setUpAll(() {
@@ -30,11 +32,9 @@ void main() {
       processWrapper = MockGgProcessWrapper();
       localMerge = LocalMerge(ggLog: ggLog, processWrapper: processWrapper);
       messages.clear();
-      testIsFlutter = false;
     });
 
     tearDown(() async {
-      testResetIsFlutter();
       await d.delete(recursive: true);
     });
 
@@ -71,32 +71,6 @@ void main() {
       ).thenAnswer((_) async => ProcessResult(0, exitCode, '', stderr));
     }
 
-    void mockPubGet({
-      String executable = 'dart',
-      int exitCode = 0,
-      String stderr = '',
-    }) {
-      when(
-        () => processWrapper.run(
-          executable,
-          ['pub', 'get'],
-          runInShell: true,
-          workingDirectory: d.path,
-        ),
-      ).thenAnswer((_) async => ProcessResult(0, exitCode, '', stderr));
-    }
-
-    void mockAddLock({int exitCode = 0, String stderr = ''}) {
-      when(
-        () => processWrapper.run(
-          any(),
-          ['add', 'pubspec.lock'],
-          runInShell: true,
-          workingDirectory: d.path,
-        ),
-      ).thenAnswer((_) async => ProcessResult(0, exitCode, '', stderr));
-    }
-
     void mockCommit(String message, {int exitCode = 0, String stderr = ''}) {
       when(
         () => processWrapper.run(
@@ -112,8 +86,6 @@ void main() {
       mockCurrentBranch('feature-branch');
       mockCheckoutMain();
       mockSquash('feature-branch');
-      mockPubGet();
-      mockAddLock();
       mockCommit('Merged feature-branch into main');
 
       final result = await localMerge.exec(directory: d, ggLog: ggLog);
@@ -125,8 +97,6 @@ void main() {
       mockCurrentBranch('feature-branch');
       mockCheckoutMain();
       mockSquash('feature-branch');
-      mockPubGet();
-      mockAddLock();
       mockCommit('Custom merge message');
 
       final result = await localMerge.get(
@@ -138,30 +108,13 @@ void main() {
       expect(messages, contains('✅ Local merge successful.'));
     });
 
-    test('uses default message if no custom message provided', () async {
-      mockCurrentBranch('feature-branch');
-      mockCheckoutMain();
-      mockSquash('feature-branch');
-      mockPubGet();
-      mockAddLock();
-      mockCommit('Merged feature-branch into main');
-
-      final result = await localMerge.get(directory: d, ggLog: ggLog);
-      expect(result, isTrue);
-    });
-
-    test('skips pub get and lock-staging when runPubGet is false', () async {
-      final noPubGetMerge = LocalMerge(
-        ggLog: ggLog,
-        processWrapper: processWrapper,
-        runPubGet: false,
-      );
+    test('does not run pub get or stage pubspec.lock', () async {
       mockCurrentBranch('feature-branch');
       mockCheckoutMain();
       mockSquash('feature-branch');
       mockCommit('Merged feature-branch into main');
 
-      final result = await noPubGetMerge.exec(directory: d, ggLog: ggLog);
+      final result = await localMerge.exec(directory: d, ggLog: ggLog);
       expect(result, isTrue);
       verifyNever(
         () => processWrapper.run(
@@ -179,27 +132,6 @@ void main() {
           workingDirectory: d.path,
         ),
       );
-    });
-
-    test('uses flutter pub get on flutter projects', () async {
-      testIsFlutter = true;
-      mockCurrentBranch('feature-branch');
-      mockCheckoutMain();
-      mockSquash('feature-branch');
-      mockPubGet(executable: 'flutter');
-      mockAddLock();
-      mockCommit('Merged feature-branch into main');
-
-      final result = await localMerge.exec(directory: d, ggLog: ggLog);
-      expect(result, isTrue);
-      verify(
-        () => processWrapper.run(
-          'flutter',
-          ['pub', 'get'],
-          runInShell: true,
-          workingDirectory: d.path,
-        ),
-      ).called(1);
     });
 
     test('throws if already on main', () async {
@@ -232,47 +164,10 @@ void main() {
       );
     });
 
-    test('throws on pub get failure', () async {
-      mockCurrentBranch('feature');
-      mockCheckoutMain();
-      mockSquash('feature');
-      mockPubGet(exitCode: 1, stderr: 'pub error');
-      expect(
-        () => localMerge.exec(directory: d, ggLog: ggLog),
-        throwsA(
-          isA<Exception>().having(
-            (e) => e.toString(),
-            'message',
-            contains('dart pub get failed: pub error'),
-          ),
-        ),
-      );
-    });
-
-    test('throws on git add pubspec.lock failure', () async {
-      mockCurrentBranch('feature');
-      mockCheckoutMain();
-      mockSquash('feature');
-      mockPubGet();
-      mockAddLock(exitCode: 1, stderr: 'add error');
-      expect(
-        () => localMerge.exec(directory: d, ggLog: ggLog),
-        throwsA(
-          isA<Exception>().having(
-            (e) => e.toString(),
-            'message',
-            contains('Failed to stage pubspec.lock: add error'),
-          ),
-        ),
-      );
-    });
-
     test('throws on commit failure', () async {
       mockCurrentBranch('feature');
       mockCheckoutMain();
       mockSquash('feature');
-      mockPubGet();
-      mockAddLock();
       mockCommit(
         'Merged feature into main',
         exitCode: 1,
@@ -331,6 +226,40 @@ void main() {
           ),
         ),
       );
+    });
+
+    group('--verbose', () {
+      test('logs each executed command when the flag is set', () async {
+        mockCurrentBranch('feature-branch');
+        mockCheckoutMain();
+        mockSquash('feature-branch');
+        mockCommit('Merged feature-branch into main');
+
+        final runner = CommandRunner<dynamic>('test', 'test')
+          ..addCommand(localMerge);
+        await runner.run(['local-merge', '--verbose', '--input', d.path]);
+
+        expect(
+          messages,
+          containsAll([
+            '\$ git rev-parse --abbrev-ref HEAD',
+            '\$ git checkout main',
+            '\$ git merge feature-branch --squash',
+            '\$ git commit -m Merged feature-branch into main',
+          ]),
+        );
+      });
+
+      test('does not log commands when the flag is not set', () async {
+        mockCurrentBranch('feature-branch');
+        mockCheckoutMain();
+        mockSquash('feature-branch');
+        mockCommit('Merged feature-branch into main');
+
+        final result = await localMerge.exec(directory: d, ggLog: ggLog);
+        expect(result, isTrue);
+        expect(messages.where((m) => m.startsWith('\$ ')), isEmpty);
+      });
     });
   });
 }

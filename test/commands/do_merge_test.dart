@@ -144,6 +144,7 @@ void main() {
           directory: any(named: 'directory'),
           ggLog: any(named: 'ggLog'),
           message: any(named: 'message'),
+          verbose: any(named: 'verbose'),
         ),
       ).thenAnswer((_) async => true);
       final doMerge = DoMerge(
@@ -160,7 +161,12 @@ void main() {
       expect(result, isTrue);
       verify(() => canMerge.get(directory: d, ggLog: ggLog)).called(1);
       verify(
-        () => localMerge.get(directory: d, ggLog: ggLog, message: null),
+        () => localMerge.get(
+          directory: d,
+          ggLog: ggLog,
+          message: null,
+          verbose: false,
+        ),
       ).called(1);
       verifyNever(
         () => mergeGit.get(
@@ -251,6 +257,7 @@ void main() {
           directory: any(named: 'directory'),
           ggLog: any(named: 'ggLog'),
           message: any(named: 'message'),
+          verbose: any(named: 'verbose'),
         ),
       ).thenAnswer((invocation) async {
         receivedMessage = invocation.namedArguments[#message] as String?;
