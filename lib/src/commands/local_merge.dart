@@ -7,6 +7,7 @@
 import 'dart:io';
 
 import 'package:gg_args/gg_args.dart';
+import 'package:gg_is_flutter/gg_is_flutter.dart';
 import 'package:gg_log/gg_log.dart';
 import 'package:gg_process/gg_process.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
@@ -17,13 +18,16 @@ class LocalMerge extends DirCommand<bool> {
   LocalMerge({
     required super.ggLog,
     GgProcessWrapper processWrapper = const GgProcessWrapper(),
+    bool runPubGet = true,
     super.name = 'local-merge',
     super.description =
         'Performs a local merge into '
         'main without remote providers.',
-  }) : _processWrapper = processWrapper;
+  }) : _processWrapper = processWrapper,
+       _runPubGet = runPubGet;
 
   final GgProcessWrapper _processWrapper;
+  final bool _runPubGet;
 
   @override
   Future<bool> exec({
@@ -82,6 +86,37 @@ class LocalMerge extends DirCommand<bool> {
     );
     if (mergeResult.exitCode != 0) {
       throw Exception('Merge failed: ${mergeResult.stderr}');
+    }
+
+    if (_runPubGet) {
+      // Run pub get so pubspec.lock is up-to-date before the squash commit.
+      // Otherwise VS Code's auto pub get races the commit and leaves
+      // pubspec.lock dirty afterwards.
+      final pubExecutable = isFlutterDir(directory) ? 'flutter' : 'dart';
+      final pubGetResult = await _processWrapper.run(
+        pubExecutable,
+        ['pub', 'get'],
+        runInShell: true,
+        workingDirectory: directory.path,
+      );
+      if (pubGetResult.exitCode != 0) {
+        throw Exception(
+          '$pubExecutable pub get failed: ${pubGetResult.stderr}',
+        );
+      }
+
+      // Stage pubspec.lock so its update is part of the squash commit.
+      final addLockResult = await _processWrapper.run(
+        'git',
+        ['add', 'pubspec.lock'],
+        runInShell: true,
+        workingDirectory: directory.path,
+      );
+      if (addLockResult.exitCode != 0) {
+        throw Exception(
+          'Failed to stage pubspec.lock: ${addLockResult.stderr}',
+        );
+      }
     }
 
     // Commit with provided message or default
