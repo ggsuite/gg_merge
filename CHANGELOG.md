@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.0.5] - 2026-05-19
+
+### Added
+
+- `LocalMerge` constructor: `runPubGet` flag (default `true`) to skip the
+pub-get + lockfile staging step. Useful for tests that drive
+`LocalMerge` through `DoMerge` with a real `GgProcessWrapper`
+
+### Fixed
+
+- `local-merge`: run `dart pub get` (or `flutter pub get`) and stage
+`pubspec.lock` between the squash merge and the commit, so the updated
+lockfile is part of the squash commit instead of being left dirty by
+VS Code's auto pub get after the fact
+
 ## [1.0.4] - 2026-03-26
 
 ### Added
@@ -32,6 +47,7 @@
 
 - prepare version 1.0.1
 
+[1.0.5]: https://github.com/inlavigo/gg_merge/compare/1.0.4...1.0.5
 [1.0.4]: https://github.com/inlavigo/gg_merge/compare/1.0.3...1.0.4
 [1.0.3]: https://github.com/inlavigo/gg_merge/compare/1.0.2...1.0.3
 [1.0.2]: https://github.com/inlavigo/gg_merge/compare/1.0.1...1.0.2
