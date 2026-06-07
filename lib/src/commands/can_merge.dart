@@ -57,7 +57,10 @@ class CanMerge extends DirCommand<bool> {
   Future<bool> get({required Directory directory, required GgLog ggLog}) async {
     await _updateProjectGit.get(directory: directory, ggLog: ggLog);
     if (await _hasLocalReferences.get(directory: directory, ggLog: ggLog)) {
-      throw Exception('Local (path:) references found in pubspec.yaml');
+      throw Exception(
+        'Local references found in the package manifest '
+        '(pubspec.yaml path: / package.json file:|link:|workspace:).',
+      );
     }
     if (await _isBehindMain.get(directory: directory, ggLog: ggLog)) {
       throw Exception(

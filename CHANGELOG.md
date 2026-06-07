@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- feat: TS-aware HasLocalReferences/HasGitReferences via gg\_lang dispatch
+
 ## [1.1.0] - 2026-05-19
 
 ## [1.0.5] - 2026-05-19
@@ -49,6 +55,7 @@ VS Code's auto pub get after the fact
 
 - prepare version 1.0.1
 
+[Unreleased]: https://github.com/inlavigo/gg_merge/compare/1.1.0...HEAD
 [1.1.0]: https://github.com/inlavigo/gg_merge/compare/1.0.5...1.1.0
 [1.0.5]: https://github.com/inlavigo/gg_merge/compare/1.0.4...1.0.5
 [1.0.4]: https://github.com/inlavigo/gg_merge/compare/1.0.3...1.0.4
