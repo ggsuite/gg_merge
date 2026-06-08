@@ -6,6 +6,7 @@
 
 - feat: TS-aware HasLocalReferences/HasGitReferences via gg\_lang dispatch
 - gg\_multi: changed references to git
+- Gg Multi: changed references to pub.dev
 
 ## [1.1.0] - 2026-05-19
 
