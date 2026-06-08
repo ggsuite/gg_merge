@@ -5,6 +5,7 @@
 ### Changed
 
 - feat: TS-aware HasLocalReferences/HasGitReferences via gg\_lang dispatch
+- gg\_multi: changed references to git
 
 ## [1.1.0] - 2026-05-19
 

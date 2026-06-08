@@ -15,7 +15,9 @@ dependencies:
   gg_git: ^3.0.0
   gg_is_flutter: ^1.0.6
   gg_lang:
-    path: ../gg_lang # path: ../gg_lang
+    git:
+      url: https://github.com/ggsuite/gg_lang.git
+      ref: lang_universal
   gg_log: ^1.0.0
   gg_process: ^1.0.7
   gg_status_printer: ^1.0.7
