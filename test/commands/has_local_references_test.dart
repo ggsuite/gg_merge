@@ -27,7 +27,7 @@ void main() {
     });
     tearDown(() async => d.delete(recursive: true));
 
-    test('throws ArgumentError if pubspec.yaml is missing', () async {
+    test('throws ArgumentError if no manifest is found', () async {
       expect(
         () => hasLocalReferences.exec(directory: d, ggLog: ggLog),
         throwsA(isA<ArgumentError>()),
@@ -58,6 +58,84 @@ dependencies:
 dev_dependencies:
   local:
     path: ../local_package
+''');
+      final result = await hasLocalReferences.exec(directory: d, ggLog: ggLog);
+      expect(result, isTrue);
+    });
+
+    // -----------------------------------------------------------------------
+    // TypeScript: package.json + tsconfig.json
+    // -----------------------------------------------------------------------
+
+    /// Writes the manifest pair (`package.json` + `tsconfig.json`) that
+    /// `detectProjectType` requires to identify a directory as TypeScript.
+    Future<void> writeTsProject(String packageJson) async {
+      await File('${d.path}/package.json').writeAsString(packageJson);
+      await File('${d.path}/tsconfig.json').writeAsString('{}');
+    }
+
+    test('TS: returns false when no local refs are present', () async {
+      await writeTsProject('''
+{
+  "name": "demo",
+  "dependencies": { "lodash": "^4.17.0" },
+  "devDependencies": { "vitest": "^4.0.0" }
+}
+''');
+      final result = await hasLocalReferences.exec(directory: d, ggLog: ggLog);
+      expect(result, isFalse);
+    });
+
+    test('TS: detects file: protocol in dependencies', () async {
+      await writeTsProject('''
+{
+  "name": "demo",
+  "dependencies": { "@me/local": "file:../local_pkg" }
+}
+''');
+      final result = await hasLocalReferences.exec(directory: d, ggLog: ggLog);
+      expect(result, isTrue);
+    });
+
+    test('TS: detects link: protocol in devDependencies', () async {
+      await writeTsProject('''
+{
+  "name": "demo",
+  "devDependencies": { "@me/linked": "link:../linked_pkg" }
+}
+''');
+      final result = await hasLocalReferences.exec(directory: d, ggLog: ggLog);
+      expect(result, isTrue);
+    });
+
+    test('TS: detects workspace: protocol in peerDependencies', () async {
+      await writeTsProject('''
+{
+  "name": "demo",
+  "peerDependencies": { "@me/sibling": "workspace:*" }
+}
+''');
+      final result = await hasLocalReferences.exec(directory: d, ggLog: ggLog);
+      expect(result, isTrue);
+    });
+
+    test('TS: detects bare relative paths', () async {
+      await writeTsProject('''
+{
+  "name": "demo",
+  "dependencies": { "@me/rel": "../some_pkg" }
+}
+''');
+      final result = await hasLocalReferences.exec(directory: d, ggLog: ggLog);
+      expect(result, isTrue);
+    });
+
+    test('TS: detects absolute Windows paths', () async {
+      await writeTsProject(r'''
+{
+  "name": "demo",
+  "optionalDependencies": { "@me/win": "C:\\repos\\pkg" }
+}
 ''');
       final result = await hasLocalReferences.exec(directory: d, ggLog: ggLog);
       expect(result, isTrue);
