@@ -14,9 +14,7 @@ dependencies:
   gg_git: ^3.0.0
   gg_is_flutter: ^1.0.6
   gg_lang:
-    git:
-      url: https://github.com/ggsuite/gg_lang.git
-      ref: bridge_build_and_script_checks
+    path: ../gg_lang # ^0.2.0
   gg_log: ^1.0.0
   gg_process: ^1.0.7
   gg_status_printer: ^1.0.7
