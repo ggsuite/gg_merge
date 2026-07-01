@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0] - 2026-07-01
+
+### Changed
+
+- feat(gg): do checkout + .gg/.ticket.json ticket marker; TS format no direct eslint & P:\programs\flutter/bin/internal/exit\_with\_errorlevel.bat
+- gg\_multi: changed references to git
+
 ## [1.3.1] - 2026-06-26
 
 ### Changed
@@ -70,6 +77,7 @@ VS Code's auto pub get after the fact
 
 - prepare version 1.0.1
 
+[1.4.0]: https://github.com/ggsuite/gg_merge/compare/1.3.1...1.4.0
 [1.3.1]: https://github.com/ggsuite/gg_merge/compare/1.3.0...1.3.1
 [1.3.0]: https://github.com/ggsuite/gg_merge/compare/1.2.0...1.3.0
 [1.2.0]: https://github.com/ggsuite/gg_merge/compare/1.1.0...1.2.0
