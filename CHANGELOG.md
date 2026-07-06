@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.0] - 2026-07-06
+
+### Changed
+
+- feat: merge via auto-complete pull request on protected main (Azure) and wait until merged
+
 ## [1.4.0] - 2026-07-01
 
 ### Changed
@@ -77,6 +83,7 @@ VS Code's auto pub get after the fact
 
 - prepare version 1.0.1
 
+[1.5.0]: https://github.com/ggsuite/gg_merge/compare/1.4.0...1.5.0
 [1.4.0]: https://github.com/ggsuite/gg_merge/compare/1.3.1...1.4.0
 [1.3.1]: https://github.com/ggsuite/gg_merge/compare/1.3.0...1.3.1
 [1.3.0]: https://github.com/ggsuite/gg_merge/compare/1.2.0...1.3.0

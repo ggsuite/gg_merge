@@ -1,6 +1,6 @@
 name: gg_merge
 description: Various tools and checks for publishing dart packages, e.g. versioning, checks etc.
-version: 1.4.0
+version: 1.5.0
 repository: https://github.com/ggsuite/gg_merge.git
 environment:
   sdk: ">=3.8.0 <4.0.0"

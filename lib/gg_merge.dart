@@ -16,3 +16,5 @@ export 'src/commands/merge_git.dart';
 export 'src/commands/can_merge.dart';
 export 'src/commands/do_merge.dart';
 export 'src/commands/local_merge.dart';
+export 'src/commands/wait_for_merge.dart';
+export 'src/util/command_helpers.dart';

@@ -15,6 +15,7 @@ import 'package:gg_merge/src/commands/merge_git.dart';
 import 'package:gg_merge/src/commands/can_merge.dart';
 import 'package:gg_merge/src/commands/do_merge.dart';
 import 'package:gg_merge/src/commands/local_merge.dart';
+import 'package:gg_merge/src/commands/wait_for_merge.dart';
 
 /// The root command for git merge automation and publication
 class GgMerge extends Command<dynamic> {
@@ -29,6 +30,7 @@ class GgMerge extends Command<dynamic> {
     addSubcommand(CanMerge(ggLog: ggLog));
     addSubcommand(DoMerge(ggLog: ggLog));
     addSubcommand(LocalMerge(ggLog: ggLog));
+    addSubcommand(WaitForMerge(ggLog: ggLog));
   }
 
   /// The log function
