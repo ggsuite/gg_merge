@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- Add --pr support: PR created plain with URL logged, auto-merge best-effort with strategy detection and squash retry, new --delete-source-branch flag
+
 ## [1.5.1] - 2026-07-20
 
 ### Changed
@@ -89,6 +95,7 @@ VS Code's auto pub get after the fact
 
 - prepare version 1.0.1
 
+[Unreleased]: https://github.com/ggsuite/gg_merge/compare/1.5.1...HEAD
 [1.5.1]: https://github.com/ggsuite/gg_merge/compare/1.5.0...1.5.1
 [1.5.0]: https://github.com/ggsuite/gg_merge/compare/1.4.0...1.5.0
 [1.4.0]: https://github.com/ggsuite/gg_merge/compare/1.3.1...1.4.0

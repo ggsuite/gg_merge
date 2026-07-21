@@ -65,6 +65,14 @@ void main() {
       ).thenAnswer((_) async => result);
     }
 
+    /// Stubs the `gh repo view` merge-settings lookup.
+    void stubGhRepoView(ProcessResult result) => stubGh([
+      'repo',
+      'view',
+      '--json',
+      'mergeCommitAllowed,squashMergeAllowed,rebaseMergeAllowed',
+    ], result);
+
     void stubAz(String subCommand, ProcessResult result) {
       when(
         () => processWrapper.run(
@@ -76,10 +84,43 @@ void main() {
       ).thenAnswer((_) async => result);
     }
 
+    /// Stubs an az call with exact [args] — needed when two calls share the
+    /// same subcommand (e.g. the squash retry of `pr update`).
+    void stubAzExact(List<String> args, ProcessResult result) {
+      when(
+        () => processWrapper.run(
+          'az',
+          args,
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => result);
+    }
+
+    List<String> azUpdateArgs({
+      required String id,
+      bool deleteSourceBranch = true,
+      bool squash = false,
+    }) => [
+      'repos',
+      'pr',
+      'update',
+      '--id',
+      id,
+      '--auto-complete',
+      'true',
+      if (deleteSourceBranch) ...['--delete-source-branch', 'true'],
+      if (squash) ...['--squash', 'true'],
+    ];
+
     // .........................................................................
     // GitHub
 
     group('GitHub', () {
+      const mergeSettings =
+          '{"mergeCommitAllowed":true,'
+          '"squashMergeAllowed":true,"rebaseMergeAllowed":true}';
+
       test('creates a PR and sets automerge with branch delete', () async {
         stubOriginUrl('https://github.com/me/repo.git');
         // No existing PR
@@ -89,11 +130,13 @@ void main() {
           'create',
           '--fill',
           '--web=false',
-        ], ProcessResult(0, 0, '', ''));
+        ], ProcessResult(0, 0, 'https://github.com/me/repo/pull/7', ''));
+        stubGhRepoView(ProcessResult(0, 0, mergeSettings, ''));
         stubGh([
           'pr',
           'merge',
           '--auto',
+          '--merge',
           '--delete-branch',
         ], ProcessResult(0, 0, '', ''));
 
@@ -103,6 +146,175 @@ void main() {
           automerge: true,
         );
         expect(result, isTrue);
+        expect(
+          messages.any(
+            (m) => m.contains(
+              'Created pull request: https://github.com/me/repo/pull/7',
+            ),
+          ),
+          isTrue,
+        );
+      });
+
+      test('omits --delete-branch when deleteSourceBranch is false', () async {
+        stubOriginUrl('https://github.com/me/repo.git');
+        stubGh(['pr', 'view', '--json', 'number'], ProcessResult(1, 1, '', ''));
+        stubGh([
+          'pr',
+          'create',
+          '--fill',
+          '--web=false',
+        ], ProcessResult(0, 0, '', ''));
+        stubGhRepoView(ProcessResult(0, 0, mergeSettings, ''));
+        stubGh([
+          'pr',
+          'merge',
+          '--auto',
+          '--merge',
+        ], ProcessResult(0, 0, '', ''));
+
+        final result = await mergeGit.get(
+          directory: d,
+          ggLog: ggLog,
+          automerge: true,
+          deleteSourceBranch: false,
+        );
+        expect(result, isTrue);
+        verify(
+          () => processWrapper.run(
+            'gh',
+            ['pr', 'merge', '--auto', '--merge'],
+            runInShell: true,
+            workingDirectory: d.path,
+          ),
+        ).called(1);
+      });
+
+      test('prefers squash when merge commits are not allowed', () async {
+        stubOriginUrl('https://github.com/me/repo.git');
+        stubGh(['pr', 'view', '--json', 'number'], ProcessResult(1, 1, '', ''));
+        stubGh([
+          'pr',
+          'create',
+          '--fill',
+          '--web=false',
+        ], ProcessResult(0, 0, '', ''));
+        stubGhRepoView(
+          ProcessResult(
+            0,
+            0,
+            '{"mergeCommitAllowed":false,'
+                '"squashMergeAllowed":true,"rebaseMergeAllowed":true}',
+            '',
+          ),
+        );
+        stubGh([
+          'pr',
+          'merge',
+          '--auto',
+          '--squash',
+          '--delete-branch',
+        ], ProcessResult(0, 0, '', ''));
+
+        final result = await mergeGit.get(
+          directory: d,
+          ggLog: ggLog,
+          automerge: true,
+        );
+        expect(result, isTrue);
+      });
+
+      test('falls back to rebase when only rebase is allowed', () async {
+        stubOriginUrl('https://github.com/me/repo.git');
+        stubGh(['pr', 'view', '--json', 'number'], ProcessResult(1, 1, '', ''));
+        stubGh([
+          'pr',
+          'create',
+          '--fill',
+          '--web=false',
+        ], ProcessResult(0, 0, '', ''));
+        stubGhRepoView(
+          ProcessResult(
+            0,
+            0,
+            '{"mergeCommitAllowed":false,'
+                '"squashMergeAllowed":false,"rebaseMergeAllowed":true}',
+            '',
+          ),
+        );
+        stubGh([
+          'pr',
+          'merge',
+          '--auto',
+          '--rebase',
+          '--delete-branch',
+        ], ProcessResult(0, 0, '', ''));
+
+        final result = await mergeGit.get(
+          directory: d,
+          ggLog: ggLog,
+          automerge: true,
+        );
+        expect(result, isTrue);
+      });
+
+      test('uses --merge when the settings lookup fails', () async {
+        stubOriginUrl('https://github.com/me/repo.git');
+        stubGh(['pr', 'view', '--json', 'number'], ProcessResult(1, 1, '', ''));
+        stubGh([
+          'pr',
+          'create',
+          '--fill',
+          '--web=false',
+        ], ProcessResult(0, 0, '', ''));
+        stubGhRepoView(ProcessResult(1, 1, '', 'no-settings'));
+        stubGh([
+          'pr',
+          'merge',
+          '--auto',
+          '--merge',
+          '--delete-branch',
+        ], ProcessResult(0, 0, '', ''));
+
+        final result = await mergeGit.get(
+          directory: d,
+          ggLog: ggLog,
+          automerge: true,
+        );
+        expect(result, isTrue);
+      });
+
+      test('uses --merge when the settings json is invalid or empty', () async {
+        for (final settings in ['not-json', '[]', '{}']) {
+          stubOriginUrl('https://github.com/me/repo.git');
+          stubGh([
+            'pr',
+            'view',
+            '--json',
+            'number',
+          ], ProcessResult(1, 1, '', ''));
+          stubGh([
+            'pr',
+            'create',
+            '--fill',
+            '--web=false',
+          ], ProcessResult(0, 0, '', ''));
+          stubGhRepoView(ProcessResult(0, 0, settings, ''));
+          stubGh([
+            'pr',
+            'merge',
+            '--auto',
+            '--merge',
+            '--delete-branch',
+          ], ProcessResult(0, 0, '', ''));
+
+          final result = await mergeGit.get(
+            directory: d,
+            ggLog: ggLog,
+            automerge: true,
+          );
+          expect(result, isTrue);
+        }
       });
 
       test('reuses an existing PR instead of creating a duplicate', () async {
@@ -114,10 +326,12 @@ void main() {
           '--json',
           'number',
         ], ProcessResult(0, 0, '{"number":7}', ''));
+        stubGhRepoView(ProcessResult(0, 0, mergeSettings, ''));
         stubGh([
           'pr',
           'merge',
           '--auto',
+          '--merge',
           '--delete-branch',
         ], ProcessResult(0, 0, '', ''));
 
@@ -152,7 +366,7 @@ void main() {
         verifyNever(
           () => processWrapper.run(
             'gh',
-            ['pr', 'merge', '--auto', '--delete-branch'],
+            any(that: contains('merge')),
             runInShell: true,
             workingDirectory: d.path,
           ),
@@ -180,7 +394,7 @@ void main() {
         );
       });
 
-      test('throws when gh pr merge fails', () async {
+      test('warns instead of throwing when gh pr merge fails', () async {
         stubOriginUrl('https://github.com/me/repo.git');
         stubGh(['pr', 'view', '--json', 'number'], ProcessResult(1, 1, '', ''));
         stubGh([
@@ -189,21 +403,28 @@ void main() {
           '--fill',
           '--web=false',
         ], ProcessResult(0, 0, '', ''));
+        stubGhRepoView(ProcessResult(0, 0, mergeSettings, ''));
         stubGh([
           'pr',
           'merge',
           '--auto',
+          '--merge',
           '--delete-branch',
-        ], ProcessResult(3, 3, '', 'mergeError'));
+        ], ProcessResult(3, 3, '', 'auto-merge disabled'));
+
+        final result = await mergeGit.get(
+          directory: d,
+          ggLog: ggLog,
+          automerge: true,
+        );
+        expect(result, isTrue);
         expect(
-          () => mergeGit.get(directory: d, ggLog: ggLog, automerge: true),
-          throwsA(
-            isA<Exception>().having(
-              (e) => e.toString(),
-              'msg',
-              contains('gh pr merge failed'),
-            ),
+          messages.any(
+            (m) =>
+                m.contains('Could not enable auto-merge') &&
+                m.contains('auto-merge disabled'),
           ),
+          isTrue,
         );
       });
     });
@@ -212,11 +433,12 @@ void main() {
     // Azure DevOps
 
     group('Azure DevOps', () {
-      test('creates an auto-complete PR when none exists', () async {
+      test('creates a PR and sets auto-complete when none exists', () async {
         stubOriginUrl('https://dev.azure.com/you/project');
         stubCurrentBranch('feature');
         stubAz('list', ProcessResult(0, 0, '[]', ''));
-        stubAz('create', ProcessResult(0, 0, '', ''));
+        stubAz('create', ProcessResult(0, 0, '{"pullRequestId":99}', ''));
+        stubAz('update', ProcessResult(0, 0, '', ''));
 
         final result = await mergeGit.exec(
           directory: d,
@@ -224,6 +446,42 @@ void main() {
           automerge: true,
         );
         expect(result, isTrue);
+        expect(
+          messages.any((m) => m.contains('Created pull request !99')),
+          isTrue,
+        );
+        verify(
+          () => processWrapper.run(
+            'az',
+            azUpdateArgs(id: '99'),
+            runInShell: true,
+            workingDirectory: d.path,
+          ),
+        ).called(1);
+      });
+
+      test('omits --delete-source-branch when disabled', () async {
+        stubOriginUrl('https://dev.azure.com/you/project');
+        stubCurrentBranch('feature');
+        stubAz('list', ProcessResult(0, 0, '[]', ''));
+        stubAz('create', ProcessResult(0, 0, '{"pullRequestId":99}', ''));
+        stubAz('update', ProcessResult(0, 0, '', ''));
+
+        final result = await mergeGit.get(
+          directory: d,
+          ggLog: ggLog,
+          automerge: true,
+          deleteSourceBranch: false,
+        );
+        expect(result, isTrue);
+        verify(
+          () => processWrapper.run(
+            'az',
+            azUpdateArgs(id: '99', deleteSourceBranch: false),
+            runInShell: true,
+            workingDirectory: d.path,
+          ),
+        ).called(1);
       });
 
       test('creates a plain PR when automerge is false', () async {
@@ -238,6 +496,125 @@ void main() {
           automerge: false,
         );
         expect(result, isTrue);
+        verifyNever(
+          () => processWrapper.run(
+            'az',
+            any(that: contains('update')),
+            runInShell: true,
+            workingDirectory: d.path,
+          ),
+        );
+      });
+
+      test('retries auto-complete with squash on a policy rejection', () async {
+        stubOriginUrl('https://dev.azure.com/you/project');
+        stubCurrentBranch('feature');
+        stubAz('list', ProcessResult(0, 0, '[]', ''));
+        stubAz('create', ProcessResult(0, 0, '{"pullRequestId":7}', ''));
+        stubAzExact(
+          azUpdateArgs(id: '7'),
+          ProcessResult(
+            1,
+            1,
+            '',
+            'ERROR: Merge strategy is not alowed by '
+                'policy',
+          ),
+        );
+        stubAzExact(
+          azUpdateArgs(id: '7', squash: true),
+          ProcessResult(0, 0, '', ''),
+        );
+
+        final result = await mergeGit.get(
+          directory: d,
+          ggLog: ggLog,
+          automerge: true,
+        );
+        expect(result, isTrue);
+        expect(messages.any((m) => m.contains('retrying with squash')), isTrue);
+      });
+
+      test('warns when no merge strategy is accepted', () async {
+        stubOriginUrl('https://dev.azure.com/you/project');
+        stubCurrentBranch('feature');
+        stubAz('list', ProcessResult(0, 0, '[]', ''));
+        stubAz('create', ProcessResult(0, 0, '{"pullRequestId":7}', ''));
+        stubAzExact(
+          azUpdateArgs(id: '7'),
+          ProcessResult(1, 1, '', 'Merge strategy is not alowed by policy'),
+        );
+        stubAzExact(
+          azUpdateArgs(id: '7', squash: true),
+          ProcessResult(1, 1, '', 'Merge strategy is not alowed by policy'),
+        );
+
+        final result = await mergeGit.get(
+          directory: d,
+          ggLog: ggLog,
+          automerge: true,
+        );
+        expect(result, isTrue);
+        expect(
+          messages.any((m) => m.contains('Could not enable auto-complete')),
+          isTrue,
+        );
+      });
+
+      test('warns instead of throwing on a generic update failure', () async {
+        stubOriginUrl('https://dev.azure.com/xyz');
+        stubCurrentBranch('feature');
+        stubAz(
+          'list',
+          ProcessResult(0, 0, '[{"pullRequestId":42,"status":"active"}]', ''),
+        );
+        stubAz('update', ProcessResult(2, 2, '', 'update-fail'));
+
+        final result = await mergeGit.get(
+          directory: d,
+          ggLog: ggLog,
+          automerge: true,
+        );
+        expect(result, isTrue);
+        expect(
+          messages.any(
+            (m) =>
+                m.contains('Could not enable auto-complete') &&
+                m.contains('update-fail'),
+          ),
+          isTrue,
+        );
+      });
+
+      test('warns when the created PR id cannot be determined', () async {
+        for (final stdout in ['', 'not-json', '{"other":1}']) {
+          messages.clear();
+          stubOriginUrl('https://dev.azure.com/you/project');
+          stubCurrentBranch('feature');
+          stubAz('list', ProcessResult(0, 0, '[]', ''));
+          stubAz('create', ProcessResult(0, 0, stdout, ''));
+
+          final result = await mergeGit.get(
+            directory: d,
+            ggLog: ggLog,
+            automerge: true,
+          );
+          expect(result, isTrue);
+          expect(
+            messages.any(
+              (m) => m.contains('Could not determine the pull request id'),
+            ),
+            isTrue,
+          );
+          verifyNever(
+            () => processWrapper.run(
+              'az',
+              any(that: contains('update')),
+              runInShell: true,
+              workingDirectory: d.path,
+            ),
+          );
+        }
       });
 
       test('reuses an existing PR and (re)sets auto-complete', () async {
@@ -289,7 +666,8 @@ void main() {
         stubOriginUrl('https://dev.azure.com/you/project');
         stubCurrentBranch('feature');
         stubAz('list', ProcessResult(1, 1, '', 'list-fail'));
-        stubAz('create', ProcessResult(0, 0, '', ''));
+        stubAz('create', ProcessResult(0, 0, '{"pullRequestId":1}', ''));
+        stubAz('update', ProcessResult(0, 0, '', ''));
 
         final result = await mergeGit.exec(
           directory: d,
@@ -303,7 +681,8 @@ void main() {
         stubOriginUrl('https://dev.azure.com/you/project');
         stubCurrentBranch('feature');
         stubAz('list', ProcessResult(0, 0, '{}', ''));
-        stubAz('create', ProcessResult(0, 0, '', ''));
+        stubAz('create', ProcessResult(0, 0, '{"pullRequestId":1}', ''));
+        stubAz('update', ProcessResult(0, 0, '', ''));
 
         final result = await mergeGit.exec(
           directory: d,
@@ -317,7 +696,8 @@ void main() {
         stubOriginUrl('https://dev.azure.com/you/project');
         stubCurrentBranch('feature');
         stubAz('list', ProcessResult(0, 0, '[{"status":"active"}]', ''));
-        stubAz('create', ProcessResult(0, 0, '', ''));
+        stubAz('create', ProcessResult(0, 0, '{"pullRequestId":1}', ''));
+        stubAz('update', ProcessResult(0, 0, '', ''));
 
         final result = await mergeGit.exec(
           directory: d,
@@ -339,26 +719,6 @@ void main() {
               (e) => e.toString(),
               'msg',
               contains('az repos pr create failed'),
-            ),
-          ),
-        );
-      });
-
-      test('throws when az repos pr update fails', () async {
-        stubOriginUrl('https://dev.azure.com/xyz');
-        stubCurrentBranch('feature');
-        stubAz(
-          'list',
-          ProcessResult(0, 0, '[{"pullRequestId":42,"status":"active"}]', ''),
-        );
-        stubAz('update', ProcessResult(2, 2, '', 'update-fail'));
-        expect(
-          () => mergeGit.get(directory: d, ggLog: ggLog, automerge: true),
-          throwsA(
-            isA<Exception>().having(
-              (e) => e.toString(),
-              'msg',
-              contains('az repos pr update failed'),
             ),
           ),
         );

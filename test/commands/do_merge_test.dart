@@ -48,6 +48,7 @@ void main() {
           directory: any(named: 'directory'),
           ggLog: any(named: 'ggLog'),
           automerge: any(named: 'automerge'),
+          deleteSourceBranch: any(named: 'deleteSourceBranch'),
         ),
       ).thenAnswer((_) async => true);
       final doMerge = DoMerge(
@@ -63,7 +64,12 @@ void main() {
       expect(result, isTrue);
       verify(() => canMerge.get(directory: d, ggLog: ggLog)).called(1);
       verify(
-        () => mergeGit.get(directory: d, ggLog: ggLog, automerge: true),
+        () => mergeGit.get(
+          directory: d,
+          ggLog: ggLog,
+          automerge: true,
+          deleteSourceBranch: true,
+        ),
       ).called(1);
       expect(messages.last, contains('Performing final merge'));
     });
@@ -97,6 +103,7 @@ void main() {
           directory: any(named: 'directory'),
           ggLog: any(named: 'ggLog'),
           automerge: any(named: 'automerge'),
+          deleteSourceBranch: any(named: 'deleteSourceBranch'),
         ),
       );
     });
@@ -115,6 +122,7 @@ void main() {
           directory: any(named: 'directory'),
           ggLog: any(named: 'ggLog'),
           automerge: any(named: 'automerge'),
+          deleteSourceBranch: any(named: 'deleteSourceBranch'),
         ),
       ).thenAnswer((invocation) async {
         paramReceived = invocation.namedArguments[#automerge] == true;
@@ -127,6 +135,42 @@ void main() {
       );
       await doMerge.exec(directory: d, ggLog: ggLog, automerge: true);
       expect(paramReceived, isTrue);
+    });
+
+    test('passes deleteSourceBranch param through to MergeGit', () async {
+      final canMerge = _MockCanMerge();
+      final mergeGit = _MockMergeGit();
+      when(
+        () => canMerge.get(
+          directory: any(named: 'directory'),
+          ggLog: any(named: 'ggLog'),
+        ),
+      ).thenAnswer((_) async => true);
+      bool? receivedDelete;
+      when(
+        () => mergeGit.get(
+          directory: any(named: 'directory'),
+          ggLog: any(named: 'ggLog'),
+          automerge: any(named: 'automerge'),
+          deleteSourceBranch: any(named: 'deleteSourceBranch'),
+        ),
+      ).thenAnswer((invocation) async {
+        receivedDelete =
+            invocation.namedArguments[#deleteSourceBranch] as bool?;
+        return true;
+      });
+      final doMerge = DoMerge(
+        ggLog: ggLog,
+        canMerge: canMerge,
+        mergeGit: mergeGit,
+      );
+      await doMerge.exec(
+        directory: d,
+        ggLog: ggLog,
+        automerge: true,
+        deleteSourceBranch: false,
+      );
+      expect(receivedDelete, isFalse);
     });
 
     test('calls LocalMerge when --local is true', () async {
@@ -173,6 +217,7 @@ void main() {
           directory: any(named: 'directory'),
           ggLog: any(named: 'ggLog'),
           automerge: any(named: 'automerge'),
+          deleteSourceBranch: any(named: 'deleteSourceBranch'),
         ),
       );
       expect(messages.last, contains('Performing final merge'));
@@ -294,6 +339,7 @@ void main() {
           directory: any(named: 'directory'),
           ggLog: any(named: 'ggLog'),
           automerge: any(named: 'automerge'),
+          deleteSourceBranch: any(named: 'deleteSourceBranch'),
         ),
       ).thenAnswer((_) async => true);
       final doMerge = DoMerge(
@@ -312,7 +358,12 @@ void main() {
         contains('Warning: --message is ignored for remote merges.'),
       );
       verify(
-        () => mergeGit.get(directory: d, ggLog: ggLog, automerge: false),
+        () => mergeGit.get(
+          directory: d,
+          ggLog: ggLog,
+          automerge: false,
+          deleteSourceBranch: true,
+        ),
       ).called(1);
       verifyNever(
         () => localMerge.get(

@@ -38,6 +38,8 @@ class DoMerge extends DirCommand<bool> {
   bool get _automergeOption => argResults?['automerge'] as bool? ?? false;
   bool get _localOption => argResults?['local'] as bool? ?? false;
   bool get _verboseOption => argResults?['verbose'] as bool? ?? false;
+  bool get _deleteSourceBranchOption =>
+      argResults?['delete-source-branch'] as bool? ?? true;
 
   @override
   Future<bool> exec({
@@ -47,6 +49,7 @@ class DoMerge extends DirCommand<bool> {
     bool? local,
     String? message,
     bool? verbose,
+    bool? deleteSourceBranch,
   }) async {
     return await GgStatusPrinter<bool>(
       message: 'Performing final merge.',
@@ -59,6 +62,7 @@ class DoMerge extends DirCommand<bool> {
         local: local,
         message: message,
         verbose: verbose,
+        deleteSourceBranch: deleteSourceBranch,
       ),
       success: (v) => v,
     );
@@ -73,11 +77,13 @@ class DoMerge extends DirCommand<bool> {
     bool? local,
     String? message,
     bool? verbose,
+    bool? deleteSourceBranch,
   }) async {
     automerge ??= _automergeOption;
     local ??= _localOption;
     message ??= _messageOption;
     verbose ??= _verboseOption;
+    deleteSourceBranch ??= _deleteSourceBranchOption;
 
     if (local && automerge) {
       throw Exception('Automerge not supported for local merges.');
@@ -105,6 +111,7 @@ class DoMerge extends DirCommand<bool> {
         directory: directory,
         ggLog: ggLog,
         automerge: automerge,
+        deleteSourceBranch: deleteSourceBranch,
       );
       ggLog('✅ Merge operation successfully started.');
     }
@@ -125,6 +132,12 @@ class DoMerge extends DirCommand<bool> {
       help: 'Perform a local merge instead of remote PR/MR.',
       negatable: true,
       defaultsTo: false,
+    );
+    argParser.addFlag(
+      'delete-source-branch',
+      help: 'Let the provider delete the source branch after the merge.',
+      negatable: true,
+      defaultsTo: true,
     );
     argParser.addOption(
       'message',
