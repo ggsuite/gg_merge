@@ -34,12 +34,16 @@ class MergeGit extends DirCommand<bool> {
   bool get _deleteSourceBranchOption =>
       argResults?['delete-source-branch'] as bool? ?? true;
 
+  /// The --message option
+  String? get _messageOption => argResults?['message'] as String?;
+
   @override
   Future<bool> exec({
     required Directory directory,
     required GgLog ggLog,
     bool? automerge,
     bool? deleteSourceBranch,
+    String? message,
   }) async {
     return await GgStatusPrinter<bool>(
       message: 'Create merge request.',
@@ -50,6 +54,7 @@ class MergeGit extends DirCommand<bool> {
         ggLog: ggLog,
         automerge: automerge,
         deleteSourceBranch: deleteSourceBranch,
+        message: message,
       ),
       success: (b) => b,
     );
@@ -65,31 +70,42 @@ class MergeGit extends DirCommand<bool> {
   /// [deleteSourceBranch] controls whether the provider deletes the source
   /// branch when it completes the pull request (default true).
   ///
+  /// [message] becomes the pull-request title and the squash merge commit
+  /// message. The merge always uses the squash strategy.
+  ///
   /// Enabling automerge is best-effort: when the provider rejects it (e.g.
-  /// GitHub's "Allow auto-merge" is off, or an Azure policy forbids every
-  /// strategy the CLI can request) the PR stays open and a warning is logged
-  /// instead of failing — [WaitForMerge] still completes once the PR is
-  /// merged manually.
+  /// GitHub's "Allow auto-merge" is off, or an Azure policy forbids the
+  /// squash strategy) the PR stays open and a warning is logged instead of
+  /// failing — [WaitForMerge] still completes once the PR is merged manually.
   @override
   Future<bool> get({
     required Directory directory,
     required GgLog ggLog,
     bool? automerge,
     bool? deleteSourceBranch,
+    String? message,
   }) async {
     automerge ??= _automergeOption;
     deleteSourceBranch ??= _deleteSourceBranchOption;
+    message ??= _messageOption;
     final remoteUrl = await _readOriginUrl(directory);
     final provider = providerFromRemoteUrl(remoteUrl);
     switch (provider) {
       case GitProvider.github:
-        await _createGitHubPR(directory, automerge, deleteSourceBranch, ggLog);
+        await _createGitHubPR(
+          directory,
+          automerge,
+          deleteSourceBranch,
+          message,
+          ggLog,
+        );
         break;
       case GitProvider.azure:
         await _createAzureDevOpsPR(
           directory,
           automerge,
           deleteSourceBranch,
+          message,
           ggLog,
         );
         break;
@@ -129,6 +145,7 @@ class MergeGit extends DirCommand<bool> {
     Directory directory,
     bool automerge,
     bool deleteSourceBranch,
+    String? message,
     GgLog ggLog,
   ) async {
     // Reuse an existing PR for the current branch to stay idempotent.
@@ -137,7 +154,15 @@ class MergeGit extends DirCommand<bool> {
     } else {
       final result = await _processWrapper.run(
         'gh',
-        ['pr', 'create', '--fill', '--web=false'],
+        [
+          'pr',
+          'create',
+          // The merge message becomes title and body; without one gh derives
+          // both from the commits (--fill).
+          if (message != null) ...['--title', message, '--body', message],
+          if (message == null) '--fill',
+          '--web=false',
+        ],
         runInShell: true,
         workingDirectory: directory.path,
       );
@@ -153,14 +178,14 @@ class MergeGit extends DirCommand<bool> {
 
     // Merge if automerge
     if (automerge) {
-      final methodFlag = await _gitHubMergeMethodFlag(directory);
       final mergeResult = await _processWrapper.run(
         'gh',
         [
           'pr',
           'merge',
           '--auto',
-          methodFlag,
+          '--squash',
+          if (message != null) ...['--subject', message],
           if (deleteSourceBranch) '--delete-branch',
         ],
         runInShell: true,
@@ -168,8 +193,8 @@ class MergeGit extends DirCommand<bool> {
       );
       if (mergeResult.exitCode != 0) {
         // Auto-merge can be unavailable (repo setting "Allow auto-merge" off,
-        // or no pending requirements). The PR stays open and the publish
-        // keeps waiting — merge it on GitHub to continue.
+        // squash merges disabled, or no pending requirements). The PR stays
+        // open and the publish keeps waiting — merge it on GitHub to continue.
         ggLog(
           '⚠️ Could not enable auto-merge '
           '(${mergeResult.stderr.toString().trim()}). '
@@ -178,37 +203,6 @@ class MergeGit extends DirCommand<bool> {
         );
       }
     }
-  }
-
-  /// Returns the `gh pr merge` method flag allowed by the repository,
-  /// preferring a merge commit over squash over rebase. Falls back to
-  /// `--merge` when the settings cannot be read.
-  Future<String> _gitHubMergeMethodFlag(Directory directory) async {
-    final result = await _processWrapper.run(
-      'gh',
-      [
-        'repo',
-        'view',
-        '--json',
-        'mergeCommitAllowed,squashMergeAllowed,rebaseMergeAllowed',
-      ],
-      runInShell: true,
-      workingDirectory: directory.path,
-    );
-    if (result.exitCode != 0) {
-      return '--merge';
-    }
-    try {
-      final decoded = jsonDecode(result.stdout.toString().trim());
-      if (decoded is Map) {
-        if (decoded['mergeCommitAllowed'] == true) return '--merge';
-        if (decoded['squashMergeAllowed'] == true) return '--squash';
-        if (decoded['rebaseMergeAllowed'] == true) return '--rebase';
-      }
-    } on FormatException {
-      // Fall through to the default below.
-    }
-    return '--merge';
   }
 
   Future<bool> _gitHubPrExists(Directory directory) async {
@@ -225,6 +219,7 @@ class MergeGit extends DirCommand<bool> {
     Directory directory,
     bool automerge,
     bool deleteSourceBranch,
+    String? message,
     GgLog ggLog,
   ) async {
     // The az cli must be installed.
@@ -239,7 +234,14 @@ class MergeGit extends DirCommand<bool> {
       // rejects the merge strategy, which would leave no PR at all.
       final result = await _processWrapper.run(
         'az',
-        ['repos', 'pr', 'create', '--source-branch', 'refs/heads/$branch'],
+        [
+          'repos',
+          'pr',
+          'create',
+          '--source-branch',
+          'refs/heads/$branch',
+          if (message != null) ...['--title', message],
+        ],
         runInShell: true,
         workingDirectory: directory.path,
       );
@@ -261,7 +263,13 @@ class MergeGit extends DirCommand<bool> {
         );
         return;
       }
-      await _setAzureAutoComplete(directory, prId, deleteSourceBranch, ggLog);
+      await _setAzureAutoComplete(
+        directory,
+        prId,
+        deleteSourceBranch,
+        message,
+        ggLog,
+      );
     }
   }
 
@@ -318,67 +326,46 @@ class MergeGit extends DirCommand<bool> {
     return null;
   }
 
-  /// Sets auto-complete on PR [id]. Azure branch policies can restrict the
-  /// allowed merge strategy; the CLI only exposes squash vs. the default
-  /// no-fast-forward merge, so the default is tried first and a policy
-  /// rejection ("merge strategy … not allowed") is retried with
-  /// `--squash true`. When no strategy is accepted a warning is logged and
-  /// the PR stays open for a manual merge.
+  /// Sets auto-complete on PR [id], always with the squash strategy and
+  /// [message] as the merge commit message. When the policy rejects it (e.g.
+  /// squash is forbidden) a warning is logged and the PR stays open for a
+  /// manual merge.
   Future<void> _setAzureAutoComplete(
     Directory directory,
     String id,
     bool deleteSourceBranch,
+    String? message,
     GgLog ggLog,
   ) async {
-    List<String> args({required bool squash}) => [
-      'repos',
-      'pr',
-      'update',
-      '--id',
-      id,
-      '--auto-complete',
-      'true',
-      if (deleteSourceBranch) ...['--delete-source-branch', 'true'],
-      if (squash) ...['--squash', 'true'],
-    ];
-
-    final first = await _processWrapper.run(
+    final result = await _processWrapper.run(
       'az',
-      args(squash: false),
+      [
+        'repos',
+        'pr',
+        'update',
+        '--id',
+        id,
+        '--auto-complete',
+        'true',
+        '--squash',
+        'true',
+        if (deleteSourceBranch) ...['--delete-source-branch', 'true'],
+        if (message != null) ...['--merge-commit-message', message],
+      ],
       runInShell: true,
       workingDirectory: directory.path,
     );
-    if (first.exitCode == 0) {
+    if (result.exitCode == 0) {
       return;
     }
 
-    var stderr = first.stderr.toString();
-    if (_isMergeStrategyRejection(stderr)) {
-      ggLog('Merge strategy rejected by policy — retrying with squash.');
-      final second = await _processWrapper.run(
-        'az',
-        args(squash: true),
-        runInShell: true,
-        workingDirectory: directory.path,
-      );
-      if (second.exitCode == 0) {
-        return;
-      }
-      stderr = second.stderr.toString();
-    }
-
     ggLog(
-      '⚠️ Could not enable auto-complete (${stderr.trim()}). '
+      '⚠️ Could not enable auto-complete '
+      '(${result.stderr.toString().trim()}). '
       'The pull request stays open — merge it on Azure DevOps; '
       'the publish waits for the merge.',
     );
   }
-
-  /// Whether [stderr] indicates that the requested merge strategy is
-  /// forbidden by a branch policy. Matched loosely because the server
-  /// message is not stable (it even contains typos like "not alowed").
-  bool _isMergeStrategyRejection(String stderr) =>
-      stderr.toLowerCase().contains('merge strategy');
 
   void _addArgs() {
     argParser.addFlag(
@@ -393,6 +380,11 @@ class MergeGit extends DirCommand<bool> {
       help: 'Let the provider delete the source branch after the merge.',
       negatable: true,
       defaultsTo: true,
+    );
+    argParser.addOption(
+      'message',
+      abbr: 'm',
+      help: 'The pull-request title and squash merge commit message.',
     );
   }
 }

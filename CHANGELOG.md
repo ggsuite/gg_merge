@@ -6,6 +6,10 @@
 
 - Add --pr support: PR created plain with URL logged, auto-merge best-effort with strategy detection and squash retry, new --delete-source-branch flag
 
+### Changed
+
+- Always squash-merge pull requests and use the merge message as PR title and squash commit message
+
 ## [1.5.1] - 2026-07-20
 
 ### Changed

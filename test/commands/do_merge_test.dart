@@ -324,7 +324,7 @@ void main() {
       expect(receivedMessage, 'Custom test message');
     });
 
-    test('ignores --message when --local is false', () async {
+    test('passes --message through to MergeGit for remote merges', () async {
       final canMerge = _MockCanMerge();
       final mergeGit = _MockMergeGit();
       final localMerge = _MockLocalMerge();
@@ -340,6 +340,7 @@ void main() {
           ggLog: any(named: 'ggLog'),
           automerge: any(named: 'automerge'),
           deleteSourceBranch: any(named: 'deleteSourceBranch'),
+          message: any(named: 'message'),
         ),
       ).thenAnswer((_) async => true);
       final doMerge = DoMerge(
@@ -351,11 +352,7 @@ void main() {
       await doMerge.exec(
         directory: d,
         ggLog: ggLog,
-        message: 'Ignored message',
-      );
-      expect(
-        messages,
-        contains('Warning: --message is ignored for remote merges.'),
+        message: 'The merge message',
       );
       verify(
         () => mergeGit.get(
@@ -363,6 +360,7 @@ void main() {
           ggLog: ggLog,
           automerge: false,
           deleteSourceBranch: true,
+          message: 'The merge message',
         ),
       ).called(1);
       verifyNever(

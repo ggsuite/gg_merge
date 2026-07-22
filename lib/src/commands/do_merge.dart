@@ -89,10 +89,6 @@ class DoMerge extends DirCommand<bool> {
       throw Exception('Automerge not supported for local merges.');
     }
 
-    if (!local && message != null) {
-      ggLog('Warning: --message is ignored for remote merges.');
-    }
-
     final ok = await _canMerge.get(directory: directory, ggLog: ggLog);
     if (!ok) {
       throw Exception('Not allowed to merge.');
@@ -112,6 +108,7 @@ class DoMerge extends DirCommand<bool> {
         ggLog: ggLog,
         automerge: automerge,
         deleteSourceBranch: deleteSourceBranch,
+        message: message,
       );
       ggLog('✅ Merge operation successfully started.');
     }
@@ -142,7 +139,9 @@ class DoMerge extends DirCommand<bool> {
     argParser.addOption(
       'message',
       abbr: 'm',
-      help: 'Custom commit message for local squash merges.',
+      help:
+          'The merge commit message: used for local squash merges and as '
+          'title + squash message of remote pull requests.',
     );
     argParser.addFlag(
       'verbose',
