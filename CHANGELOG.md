@@ -9,6 +9,7 @@
 ### Changed
 
 - Always squash-merge pull requests and use the merge message as PR title and squash commit message
+- Share the origin-url lookup, use named arguments in MergeGit internals and unify the best-effort automerge warning
 
 ## [1.5.1] - 2026-07-20
 

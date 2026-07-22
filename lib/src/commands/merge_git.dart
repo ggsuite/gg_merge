@@ -88,44 +88,37 @@ class MergeGit extends DirCommand<bool> {
     automerge ??= _automergeOption;
     deleteSourceBranch ??= _deleteSourceBranchOption;
     message ??= _messageOption;
-    final remoteUrl = await _readOriginUrl(directory);
+    final remoteUrl = await readOriginUrl(
+      directory: directory,
+      processWrapper: _processWrapper,
+    );
+    if (remoteUrl == null) {
+      throw Exception('git config failed: could not read remote.origin.url');
+    }
     final provider = providerFromRemoteUrl(remoteUrl);
     switch (provider) {
       case GitProvider.github:
         await _createGitHubPR(
           directory,
-          automerge,
-          deleteSourceBranch,
-          message,
           ggLog,
+          automerge: automerge,
+          deleteSourceBranch: deleteSourceBranch,
+          message: message,
         );
         break;
       case GitProvider.azure:
         await _createAzureDevOpsPR(
           directory,
-          automerge,
-          deleteSourceBranch,
-          message,
           ggLog,
+          automerge: automerge,
+          deleteSourceBranch: deleteSourceBranch,
+          message: message,
         );
         break;
       case null:
         throw UnimplementedError('Unsupported git provider url: $remoteUrl');
     }
     return true;
-  }
-
-  Future<String> _readOriginUrl(Directory directory) async {
-    final result = await _processWrapper.run(
-      'git',
-      ['config', '--get', 'remote.origin.url'],
-      runInShell: true,
-      workingDirectory: directory.path,
-    );
-    if (result.exitCode != 0) {
-      throw Exception('git config failed: ${result.stderr}');
-    }
-    return result.stdout.toString().trim();
   }
 
   Future<String> _currentBranch(Directory directory) async {
@@ -143,11 +136,11 @@ class MergeGit extends DirCommand<bool> {
 
   Future<void> _createGitHubPR(
     Directory directory,
-    bool automerge,
-    bool deleteSourceBranch,
-    String? message,
-    GgLog ggLog,
-  ) async {
+    GgLog ggLog, {
+    required bool automerge,
+    required bool deleteSourceBranch,
+    required String? message,
+  }) async {
     // Reuse an existing PR for the current branch to stay idempotent.
     if (await _gitHubPrExists(directory)) {
       ggLog('Reusing existing pull request for the current branch.');
@@ -193,16 +186,31 @@ class MergeGit extends DirCommand<bool> {
       );
       if (mergeResult.exitCode != 0) {
         // Auto-merge can be unavailable (repo setting "Allow auto-merge" off,
-        // squash merges disabled, or no pending requirements). The PR stays
-        // open and the publish keeps waiting — merge it on GitHub to continue.
-        ggLog(
-          '⚠️ Could not enable auto-merge '
-          '(${mergeResult.stderr.toString().trim()}). '
-          'The pull request stays open — merge it on GitHub; '
-          'the publish waits for the merge.',
+        // squash merges disabled, or no pending requirements).
+        _warnAutomergeUnavailable(
+          ggLog: ggLog,
+          providerName: 'GitHub',
+          reason:
+              'Could not enable auto-merge '
+              '(${mergeResult.stderr.toString().trim()}).',
         );
       }
     }
+  }
+
+  /// Logs the shared best-effort automerge policy: enabling automerge never
+  /// fails the publish — the pull request stays open for a manual merge and
+  /// [WaitForMerge] keeps waiting.
+  void _warnAutomergeUnavailable({
+    required GgLog ggLog,
+    required String providerName,
+    required String reason,
+  }) {
+    ggLog(
+      '⚠️ $reason '
+      'The pull request stays open — merge it on $providerName; '
+      'the publish waits for the merge.',
+    );
   }
 
   Future<bool> _gitHubPrExists(Directory directory) async {
@@ -217,11 +225,11 @@ class MergeGit extends DirCommand<bool> {
 
   Future<void> _createAzureDevOpsPR(
     Directory directory,
-    bool automerge,
-    bool deleteSourceBranch,
-    String? message,
-    GgLog ggLog,
-  ) async {
+    GgLog ggLog, {
+    required bool automerge,
+    required bool deleteSourceBranch,
+    required String? message,
+  }) async {
     // The az cli must be installed.
     final branch = await _currentBranch(directory);
     var prId = await _existingAzurePrId(directory, branch);
@@ -256,38 +264,34 @@ class MergeGit extends DirCommand<bool> {
 
     if (automerge) {
       if (prId == null) {
-        ggLog(
-          '⚠️ Could not determine the pull request id — auto-complete was '
-          'not set. Merge the pull request on Azure DevOps; the publish '
-          'waits for the merge.',
+        _warnAutomergeUnavailable(
+          ggLog: ggLog,
+          providerName: 'Azure DevOps',
+          reason:
+              'Could not determine the pull request id — auto-complete '
+              'was not set.',
         );
         return;
       }
       await _setAzureAutoComplete(
         directory,
         prId,
-        deleteSourceBranch,
-        message,
         ggLog,
+        deleteSourceBranch: deleteSourceBranch,
+        message: message,
       );
     }
   }
 
   /// Extracts the pullRequestId from `az repos pr create` JSON output.
+  /// An empty stdout throws the same [FormatException] as malformed JSON.
   String? _prIdFromCreateOutput(String stdout) {
-    final out = stdout.trim();
-    if (out.isEmpty) {
-      return null;
-    }
     try {
-      final decoded = jsonDecode(out);
-      if (decoded is Map && decoded['pullRequestId'] != null) {
-        return decoded['pullRequestId'].toString();
-      }
+      final decoded = jsonDecode(stdout.trim());
+      return decoded is Map ? decoded['pullRequestId']?.toString() : null;
     } on FormatException {
       return null;
     }
-    return null;
   }
 
   /// Returns the id of an active Azure DevOps PR for [branch], or null.
@@ -333,10 +337,10 @@ class MergeGit extends DirCommand<bool> {
   Future<void> _setAzureAutoComplete(
     Directory directory,
     String id,
-    bool deleteSourceBranch,
-    String? message,
-    GgLog ggLog,
-  ) async {
+    GgLog ggLog, {
+    required bool deleteSourceBranch,
+    required String? message,
+  }) async {
     final result = await _processWrapper.run(
       'az',
       [
@@ -359,11 +363,12 @@ class MergeGit extends DirCommand<bool> {
       return;
     }
 
-    ggLog(
-      '⚠️ Could not enable auto-complete '
-      '(${result.stderr.toString().trim()}). '
-      'The pull request stays open — merge it on Azure DevOps; '
-      'the publish waits for the merge.',
+    _warnAutomergeUnavailable(
+      ggLog: ggLog,
+      providerName: 'Azure DevOps',
+      reason:
+          'Could not enable auto-complete '
+          '(${result.stderr.toString().trim()}).',
     );
   }
 

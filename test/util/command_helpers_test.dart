@@ -4,8 +4,14 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
+import 'dart:io';
+
+import 'package:gg_process/gg_process.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:gg_merge/src/util/command_helpers.dart';
+
+class _MockGgProcessWrapper extends Mock implements GgProcessWrapper {}
 
 void main() {
   group('parseGitAheadBehind', () {
@@ -85,6 +91,45 @@ void main() {
     test('returns null for unknown or unsupported hosts', () {
       expect(providerFromRemoteUrl('https://bitbucket.org/x/y'), isNull);
       expect(providerFromRemoteUrl(''), isNull);
+    });
+  });
+
+  group('readOriginUrl', () {
+    late Directory d;
+    late _MockGgProcessWrapper processWrapper;
+
+    setUp(() async {
+      d = await Directory.systemTemp.createTemp('helpers_test_');
+      processWrapper = _MockGgProcessWrapper();
+    });
+
+    tearDown(() async => d.delete(recursive: true));
+
+    void stub(ProcessResult result) {
+      when(
+        () => processWrapper.run(
+          'git',
+          ['config', '--get', 'remote.origin.url'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).thenAnswer((_) async => result);
+    }
+
+    test('returns the trimmed origin url', () async {
+      stub(ProcessResult(0, 0, 'https://github.com/me/repo.git\n', ''));
+      expect(
+        await readOriginUrl(directory: d, processWrapper: processWrapper),
+        'https://github.com/me/repo.git',
+      );
+    });
+
+    test('returns null when the remote cannot be read', () async {
+      stub(ProcessResult(1, 1, '', 'no origin'));
+      expect(
+        await readOriginUrl(directory: d, processWrapper: processWrapper),
+        isNull,
+      );
     });
   });
 }

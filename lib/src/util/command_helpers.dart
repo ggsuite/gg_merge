@@ -4,6 +4,10 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
+import 'dart:io';
+
+import 'package:gg_process/gg_process.dart';
+
 /// Parses a string of format 'A B' (e.g., '3 2') to (behind, ahead) tuple.
 (int behind, int ahead) parseGitAheadBehind(String output) {
   final trimmed = output.trim();
@@ -35,4 +39,23 @@ GitProvider? providerFromRemoteUrl(String url) {
     return GitProvider.azure;
   }
   return null;
+}
+
+/// Reads the `remote.origin.url` of [directory]. Returns null when it cannot
+/// be read (e.g. no origin configured). The single origin lookup shared by
+/// MergeGit, WaitForMerge and gg_one's pull-request-flow detection.
+Future<String?> readOriginUrl({
+  required Directory directory,
+  required GgProcessWrapper processWrapper,
+}) async {
+  final result = await processWrapper.run(
+    'git',
+    ['config', '--get', 'remote.origin.url'],
+    runInShell: true,
+    workingDirectory: directory.path,
+  );
+  if (result.exitCode != 0) {
+    return null;
+  }
+  return result.stdout.toString().trim();
 }
