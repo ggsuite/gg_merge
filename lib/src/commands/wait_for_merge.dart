@@ -54,7 +54,13 @@ class WaitForMerge extends DirCommand<bool> {
   /// Blocks until the pull request of the current branch is merged.
   @override
   Future<bool> get({required Directory directory, required GgLog ggLog}) async {
-    final remoteUrl = await _readOriginUrl(directory);
+    final remoteUrl = await readOriginUrl(
+      directory: directory,
+      processWrapper: _processWrapper,
+    );
+    if (remoteUrl == null) {
+      throw Exception('git config failed: could not read remote.origin.url');
+    }
     final provider = providerFromRemoteUrl(remoteUrl);
     final branch = await _currentBranch(directory);
     switch (provider) {
@@ -65,19 +71,6 @@ class WaitForMerge extends DirCommand<bool> {
       case null:
         throw UnimplementedError('Unsupported git provider url: $remoteUrl');
     }
-  }
-
-  Future<String> _readOriginUrl(Directory directory) async {
-    final result = await _processWrapper.run(
-      'git',
-      ['config', '--get', 'remote.origin.url'],
-      runInShell: true,
-      workingDirectory: directory.path,
-    );
-    if (result.exitCode != 0) {
-      throw Exception('git config failed: ${result.stderr}');
-    }
-    return result.stdout.toString().trim();
   }
 
   Future<String> _currentBranch(Directory directory) async {

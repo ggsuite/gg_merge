@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.6.0] - 2026-07-22
+
+### Added
+
+- Add --pr support: PR created plain with URL logged, auto-merge best-effort with strategy detection and squash retry, new --delete-source-branch flag
+
+### Changed
+
+- Always squash-merge pull requests and use the merge message as PR title and squash commit message
+- Share the origin-url lookup, use named arguments in MergeGit internals and unify the best-effort automerge warning
+- gg\_multi: changed references to git
+
 ## [1.5.1] - 2026-07-20
 
 ### Changed
@@ -89,6 +101,7 @@ VS Code's auto pub get after the fact
 
 - prepare version 1.0.1
 
+[1.6.0]: https://github.com/ggsuite/gg_merge/compare/1.5.1...1.6.0
 [1.5.1]: https://github.com/ggsuite/gg_merge/compare/1.5.0...1.5.1
 [1.5.0]: https://github.com/ggsuite/gg_merge/compare/1.4.0...1.5.0
 [1.4.0]: https://github.com/ggsuite/gg_merge/compare/1.3.1...1.4.0

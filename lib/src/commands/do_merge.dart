@@ -38,6 +38,8 @@ class DoMerge extends DirCommand<bool> {
   bool get _automergeOption => argResults?['automerge'] as bool? ?? false;
   bool get _localOption => argResults?['local'] as bool? ?? false;
   bool get _verboseOption => argResults?['verbose'] as bool? ?? false;
+  bool get _deleteSourceBranchOption =>
+      argResults?['delete-source-branch'] as bool? ?? true;
 
   @override
   Future<bool> exec({
@@ -47,6 +49,7 @@ class DoMerge extends DirCommand<bool> {
     bool? local,
     String? message,
     bool? verbose,
+    bool? deleteSourceBranch,
   }) async {
     return await GgStatusPrinter<bool>(
       message: 'Performing final merge.',
@@ -59,6 +62,7 @@ class DoMerge extends DirCommand<bool> {
         local: local,
         message: message,
         verbose: verbose,
+        deleteSourceBranch: deleteSourceBranch,
       ),
       success: (v) => v,
     );
@@ -73,18 +77,16 @@ class DoMerge extends DirCommand<bool> {
     bool? local,
     String? message,
     bool? verbose,
+    bool? deleteSourceBranch,
   }) async {
     automerge ??= _automergeOption;
     local ??= _localOption;
     message ??= _messageOption;
     verbose ??= _verboseOption;
+    deleteSourceBranch ??= _deleteSourceBranchOption;
 
     if (local && automerge) {
       throw Exception('Automerge not supported for local merges.');
-    }
-
-    if (!local && message != null) {
-      ggLog('Warning: --message is ignored for remote merges.');
     }
 
     final ok = await _canMerge.get(directory: directory, ggLog: ggLog);
@@ -105,6 +107,8 @@ class DoMerge extends DirCommand<bool> {
         directory: directory,
         ggLog: ggLog,
         automerge: automerge,
+        deleteSourceBranch: deleteSourceBranch,
+        message: message,
       );
       ggLog('✅ Merge operation successfully started.');
     }
@@ -126,10 +130,18 @@ class DoMerge extends DirCommand<bool> {
       negatable: true,
       defaultsTo: false,
     );
+    argParser.addFlag(
+      'delete-source-branch',
+      help: 'Let the provider delete the source branch after the merge.',
+      negatable: true,
+      defaultsTo: true,
+    );
     argParser.addOption(
       'message',
       abbr: 'm',
-      help: 'Custom commit message for local squash merges.',
+      help:
+          'The merge commit message: used for local squash merges and as '
+          'title + squash message of remote pull requests.',
     );
     argParser.addFlag(
       'verbose',
