@@ -1,0 +1,22 @@
+{
+  "issue_id": "05_dont_repeat_poll_messages",
+  "description": "Do not repeat poll messages while publishing or merging",
+  "repositories": [
+    {
+      "name": "gg_lang",
+      "url": "git@github.com:ggsuite/gg_lang.git"
+    },
+    {
+      "name": "gg_merge",
+      "url": "git@github.com:ggsuite/gg_merge.git"
+    },
+    {
+      "name": "gg_version",
+      "url": "git@github.com:ggsuite/gg_version.git"
+    },
+    {
+      "name": "gg_publish",
+      "url": "git@github.com:ggsuite/gg_publish.git"
+    }
+  ]
+}
