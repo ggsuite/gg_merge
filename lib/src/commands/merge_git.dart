@@ -196,14 +196,40 @@ class MergeGit extends DirCommand<bool> {
       );
       if (mergeResult.exitCode != 0) {
         // Auto-merge can be unavailable (repo setting "Allow auto-merge" off,
-        // squash merges disabled, or no pending requirements).
-        _warnAutomergeUnavailable(
-          ggLog: ggLog,
-          providerName: 'GitHub',
-          reason:
-              'Could not enable auto-merge '
-              '(${mergeResult.stderr.toString().trim()}).',
+        // squash merges disabled, or no pending requirements). All gg checks
+        // already passed locally at this point, so fall back to merging the
+        // pull request directly. Only when that fails too (e.g. required
+        // checks are still pending) the PR stays open for a manual merge.
+        final directResult = await _processWrapper.run(
+          'gh',
+          [
+            'pr',
+            'merge',
+            '--squash',
+            if (message != null) ...['--subject', message],
+            if (deleteSourceBranch) '--delete-branch',
+          ],
+          runInShell: true,
+          workingDirectory: directory.path,
         );
+        if (directResult.exitCode == 0) {
+          ggLog(
+            darkGray(
+              'Auto-merge is not allowed for this repository — '
+              'merged the pull request directly (squash).',
+            ),
+          );
+        } else {
+          _warnAutomergeUnavailable(
+            ggLog: ggLog,
+            providerName: 'GitHub',
+            reason:
+                'Could not enable auto-merge '
+                '(${mergeResult.stderr.toString().trim()}) and the direct '
+                'merge failed too '
+                '(${directResult.stderr.toString().trim()}).',
+          );
+        }
       }
     }
   }
