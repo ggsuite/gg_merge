@@ -236,6 +236,31 @@ void main() {
         );
       });
 
+      test('uses the given branch instead of HEAD', () async {
+        stubOriginUrl('https://github.com/me/repo.git');
+        // HEAD already moved on to main — the explicit branch must win, so
+        // the lookup does not search for a pull request of »main«.
+        stubCurrentBranch('main');
+        stubSequence('gh', 'list', [
+          ProcessResult(0, 0, '[{"state":"MERGED"}]', ''),
+        ]);
+
+        final result = await waitForMerge.get(
+          directory: d,
+          ggLog: ggLog,
+          branch: 'feature',
+        );
+        expect(result, isTrue);
+        verify(
+          () => processWrapper.run(
+            'gh',
+            any(that: contains('feature')),
+            runInShell: any(named: 'runInShell'),
+            workingDirectory: d.path,
+          ),
+        ).called(1);
+      });
+
       test('logs the PR url once, so the status can be monitored', () async {
         stubOriginUrl('https://github.com/me/repo.git');
         stubCurrentBranch('feature');

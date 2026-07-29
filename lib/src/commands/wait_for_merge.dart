@@ -53,8 +53,18 @@ class WaitForMerge extends DirCommand<bool> {
   }
 
   /// Blocks until the pull request of the current branch is merged.
+  ///
+  /// [branch] names the source branch of the pull request. Pass it whenever
+  /// the caller knows it — HEAD may have moved on to the default branch by
+  /// the time the wait starts (e.g. a merge that deleted the feature branch
+  /// checked out main), and searching for a pull request of the default
+  /// branch would fail with a misleading "no pull request found".
   @override
-  Future<bool> get({required Directory directory, required GgLog ggLog}) async {
+  Future<bool> get({
+    required Directory directory,
+    required GgLog ggLog,
+    String? branch,
+  }) async {
     final remoteUrl = await readOriginUrl(
       directory: directory,
       processWrapper: _processWrapper,
@@ -63,7 +73,7 @@ class WaitForMerge extends DirCommand<bool> {
       throw Exception('git config failed: could not read remote.origin.url');
     }
     final provider = providerFromRemoteUrl(remoteUrl);
-    final branch = await _currentBranch(directory);
+    branch ??= await _currentBranch(directory);
     switch (provider) {
       case GitProvider.github:
         return _waitGitHub(directory, branch, ggLog);

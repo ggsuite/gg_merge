@@ -466,14 +466,6 @@ void main() {
           '--squash',
           '--delete-branch',
         ], ProcessResult(3, 3, '', 'auto-merge disabled'));
-        // The direct-merge fallback fails too, e.g. required checks pending.
-        stubGh([
-          'pr',
-          'merge',
-          '--squash',
-          '--delete-branch',
-        ], ProcessResult(3, 3, '', 'required checks pending'));
-
         final result = await mergeGit.get(
           directory: d,
           ggLog: ggLog,
@@ -485,13 +477,14 @@ void main() {
             (m) =>
                 m.contains('Could not enable auto-merge') &&
                 m.contains('auto-merge disabled') &&
-                m.contains('required checks pending'),
+                m.contains('the publish waits for the merge'),
           ),
           isTrue,
         );
       });
 
-      test('merges directly when auto-merge is not allowed', () async {
+      test('never merges the pull request itself when auto-merge '
+          'is rejected', () async {
         stubOriginUrl('https://github.com/me/repo.git');
         stubCurrentBranch('feature');
         stubGh([
@@ -509,10 +502,7 @@ void main() {
         stubGh([
           'pr',
           'create',
-          '--title',
-          'Release 1.2.3',
-          '--body',
-          'Release 1.2.3',
+          '--fill',
           '--web=false',
         ], ProcessResult(0, 0, '', ''));
         stubGh([
@@ -520,36 +510,34 @@ void main() {
           'merge',
           '--auto',
           '--squash',
-          '--subject',
-          'Release 1.2.3',
           '--delete-branch',
         ], ProcessResult(1, 1, '', 'Auto merge is not allowed'));
-        // The direct merge keeps the squash subject.
-        stubGh([
-          'pr',
-          'merge',
-          '--squash',
-          '--subject',
-          'Release 1.2.3',
-          '--delete-branch',
-        ], ProcessResult(0, 0, '', ''));
 
         final result = await mergeGit.get(
           directory: d,
           ggLog: ggLog,
           automerge: true,
-          message: 'Release 1.2.3',
         );
         expect(result, isTrue);
-        expect(
-          messages.any((m) => m.contains('merged the pull request directly')),
-          isTrue,
+
+        // Merging stays a human decision: no plain »gh pr merge« is run.
+        verifyNever(
+          () => processWrapper.run(
+            'gh',
+            any(
+              that: predicate<List<String>>(
+                (args) =>
+                    args.length > 1 &&
+                    args[0] == 'pr' &&
+                    args[1] == 'merge' &&
+                    !args.contains('--auto'),
+              ),
+            ),
+            runInShell: any(named: 'runInShell'),
+            workingDirectory: any(named: 'workingDirectory'),
+          ),
         );
-        // No warning in this case.
-        expect(
-          messages.any((m) => m.contains('Could not enable auto-merge')),
-          isFalse,
-        );
+        expect(messages.any((m) => m.contains('merge it on GitHub')), isTrue);
       });
     });
 

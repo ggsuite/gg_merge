@@ -12,10 +12,12 @@
 - "Created pull request" / "Reusing existing pull request" messages are printed dark gray (url blue)
 - Reuse only open pull requests; print PR messages dark gray
 - Fall back to a direct squash merge when auto-merge is not allowed
+- Never merge a pull request automatically; pass the PR source branch to the wait
 
 ### Fixed
 
-- When GitHub rejects auto-merge (repo setting "Allow auto-merge" off), the pull request is now merged directly (squash) — all gg checks passed locally at that point; only when the direct merge fails too the PR stays open for a manual merge
+- gg never merges a pull request on its own: when the provider rejects auto-merge, the PR stays open and the publish waits for the manual merge (the merge stays an explicit human decision)
+- WaitForMerge accepts the pull request's source branch, so the wait no longer looks for a pull request of the default branch when HEAD moved on ("No pull request found for branch main")
 - PR reuse now only considers OPEN pull requests. Before, a merged pull request of an earlier release on the same branch was "reused", so wait-for-merge saw »merged« immediately although the new release content was never merged to main
 
 ## [1.6.0] - 2026-07-22
