@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- The pull request url is now surfaced everywhere the publish interacts with a PR: when it is created, when an existing PR is reused, and once at the start of the wait-for-merge poll ("Check the pull request status here: <url>", printed blue) — on GitHub from `gh`, on Azure DevOps built from `repository.webUrl`
+
+### Changed
+
+- Show the pull request url on create, reuse and while waiting for the merge
+
 ## [1.6.0] - 2026-07-22
 
 ### Added
@@ -101,6 +111,7 @@ VS Code's auto pub get after the fact
 
 - prepare version 1.0.1
 
+[Unreleased]: https://github.com/ggsuite/gg_merge/compare/1.6.0...HEAD
 [1.6.0]: https://github.com/ggsuite/gg_merge/compare/1.5.1...1.6.0
 [1.5.1]: https://github.com/ggsuite/gg_merge/compare/1.5.0...1.5.1
 [1.5.0]: https://github.com/ggsuite/gg_merge/compare/1.4.0...1.5.0

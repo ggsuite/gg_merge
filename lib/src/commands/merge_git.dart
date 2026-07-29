@@ -7,6 +7,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:gg_args/gg_args.dart';
+import 'package:gg_console_colors/gg_console_colors.dart';
 import 'package:gg_log/gg_log.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
 import 'package:gg_process/gg_process.dart';
@@ -142,8 +143,11 @@ class MergeGit extends DirCommand<bool> {
     required String? message,
   }) async {
     // Reuse an existing PR for the current branch to stay idempotent.
-    if (await _gitHubPrExists(directory)) {
-      ggLog('Reusing existing pull request for the current branch.');
+    final existing = await _gitHubExistingPr(directory);
+    if (existing.exists) {
+      // Surface the PR page so its status can be monitored directly.
+      final urlHint = existing.url == null ? '' : ' ${blue(existing.url!)}';
+      ggLog('Reusing existing pull request:$urlHint');
     } else {
       final result = await _processWrapper.run(
         'gh',
@@ -162,10 +166,11 @@ class MergeGit extends DirCommand<bool> {
       if (result.exitCode != 0) {
         throw Exception('gh pr create failed: ${result.stderr}');
       }
-      // gh prints the PR url — surface it so a manual merge is one click away.
+      // gh prints the PR url — surface it so its status can be monitored
+      // directly and a manual merge is one click away.
       final url = result.stdout.toString().trim();
       if (url.isNotEmpty) {
-        ggLog('Created pull request: $url');
+        ggLog('Created pull request: ${blue(url)}');
       }
     }
 
@@ -213,14 +218,27 @@ class MergeGit extends DirCommand<bool> {
     );
   }
 
-  Future<bool> _gitHubPrExists(Directory directory) async {
+  /// Returns whether an open PR exists for the current branch — and its web
+  /// page url when it can be read from the `gh pr view` output.
+  Future<({bool exists, String? url})> _gitHubExistingPr(
+    Directory directory,
+  ) async {
     final result = await _processWrapper.run(
       'gh',
-      ['pr', 'view', '--json', 'number'],
+      ['pr', 'view', '--json', 'number,url'],
       runInShell: true,
       workingDirectory: directory.path,
     );
-    return result.exitCode == 0;
+    if (result.exitCode != 0) {
+      return (exists: false, url: null);
+    }
+    try {
+      final decoded = jsonDecode(result.stdout.toString().trim());
+      final url = decoded is Map ? decoded['url']?.toString() : null;
+      return (exists: true, url: url);
+    } on FormatException {
+      return (exists: true, url: null);
+    }
   }
 
   Future<void> _createAzureDevOpsPR(

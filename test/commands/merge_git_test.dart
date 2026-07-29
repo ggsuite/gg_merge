@@ -114,7 +114,12 @@ void main() {
           'delete', () async {
         stubOriginUrl('https://github.com/me/repo.git');
         // No existing PR
-        stubGh(['pr', 'view', '--json', 'number'], ProcessResult(1, 1, '', ''));
+        stubGh([
+          'pr',
+          'view',
+          '--json',
+          'number,url',
+        ], ProcessResult(1, 1, '', ''));
         stubGh([
           'pr',
           'create',
@@ -135,11 +140,12 @@ void main() {
           automerge: true,
         );
         expect(result, isTrue);
+        // The url is printed blue, so match the parts around the color code.
         expect(
           messages.any(
-            (m) => m.contains(
-              'Created pull request: https://github.com/me/repo/pull/7',
-            ),
+            (m) =>
+                m.contains('Created pull request:') &&
+                m.contains('https://github.com/me/repo/pull/7'),
           ),
           isTrue,
         );
@@ -147,7 +153,12 @@ void main() {
 
       test('omits --delete-branch when deleteSourceBranch is false', () async {
         stubOriginUrl('https://github.com/me/repo.git');
-        stubGh(['pr', 'view', '--json', 'number'], ProcessResult(1, 1, '', ''));
+        stubGh([
+          'pr',
+          'view',
+          '--json',
+          'number,url',
+        ], ProcessResult(1, 1, '', ''));
         stubGh([
           'pr',
           'create',
@@ -180,7 +191,12 @@ void main() {
 
       test('uses the message as PR title, body and squash subject', () async {
         stubOriginUrl('https://github.com/me/repo.git');
-        stubGh(['pr', 'view', '--json', 'number'], ProcessResult(1, 1, '', ''));
+        stubGh([
+          'pr',
+          'view',
+          '--json',
+          'number,url',
+        ], ProcessResult(1, 1, '', ''));
         stubGh([
           'pr',
           'create',
@@ -244,12 +260,47 @@ void main() {
       test('reuses an existing PR instead of creating a duplicate', () async {
         stubOriginUrl('https://github.com/me/repo.git');
         // Existing PR
+        stubGh(
+          ['pr', 'view', '--json', 'number,url'],
+          ProcessResult(
+            0,
+            0,
+            '{"number":7,"url":"https://github.com/me/repo/pull/7"}',
+            '',
+          ),
+        );
+        stubGh([
+          'pr',
+          'merge',
+          '--auto',
+          '--squash',
+          '--delete-branch',
+        ], ProcessResult(0, 0, '', ''));
+
+        final result = await mergeGit.exec(
+          directory: d,
+          ggLog: ggLog,
+          automerge: true,
+        );
+        expect(result, isTrue);
+        expect(
+          messages.any((m) => m.contains('Reusing existing pull request')),
+          isTrue,
+        );
+        expect(
+          messages.any((m) => m.contains('https://github.com/me/repo/pull/7')),
+          isTrue,
+        );
+      });
+
+      test('tolerates malformed json from gh pr view on reuse', () async {
+        stubOriginUrl('https://github.com/me/repo.git');
         stubGh([
           'pr',
           'view',
           '--json',
-          'number',
-        ], ProcessResult(0, 0, '{"number":7}', ''));
+          'number,url',
+        ], ProcessResult(0, 0, 'not json', ''));
         stubGh([
           'pr',
           'merge',
@@ -272,7 +323,12 @@ void main() {
 
       test('does not merge when automerge is false', () async {
         stubOriginUrl('https://github.com/me/repo.git');
-        stubGh(['pr', 'view', '--json', 'number'], ProcessResult(1, 1, '', ''));
+        stubGh([
+          'pr',
+          'view',
+          '--json',
+          'number,url',
+        ], ProcessResult(1, 1, '', ''));
         stubGh([
           'pr',
           'create',
@@ -298,7 +354,12 @@ void main() {
 
       test('throws when gh pr create fails', () async {
         stubOriginUrl('https://github.com/me/repo.git');
-        stubGh(['pr', 'view', '--json', 'number'], ProcessResult(1, 1, '', ''));
+        stubGh([
+          'pr',
+          'view',
+          '--json',
+          'number,url',
+        ], ProcessResult(1, 1, '', ''));
         stubGh([
           'pr',
           'create',
@@ -319,7 +380,12 @@ void main() {
 
       test('warns instead of throwing when gh pr merge fails', () async {
         stubOriginUrl('https://github.com/me/repo.git');
-        stubGh(['pr', 'view', '--json', 'number'], ProcessResult(1, 1, '', ''));
+        stubGh([
+          'pr',
+          'view',
+          '--json',
+          'number,url',
+        ], ProcessResult(1, 1, '', ''));
         stubGh([
           'pr',
           'create',

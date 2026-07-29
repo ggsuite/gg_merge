@@ -87,6 +87,29 @@ void main() {
         expect(messages.any((m) => m.contains('merged')), isTrue);
       });
 
+      test('logs the PR web page built from repository.webUrl', () async {
+        stubOriginUrl('https://dev.azure.com/you/project');
+        stubCurrentBranch('feature');
+        stubSequence('az', 'list', [
+          ProcessResult(
+            0,
+            0,
+            '[{"pullRequestId":42,"status":"completed",'
+                '"repository":{"webUrl":"https://dev.azure.com/o/p/_git/r"}}]',
+            '',
+          ),
+        ]);
+        final result = await waitForMerge.get(directory: d, ggLog: ggLog);
+        expect(result, isTrue);
+        expect(
+          messages.any(
+            (m) =>
+                m.contains('https://dev.azure.com/o/p/_git/r/pullrequest/42'),
+          ),
+          isTrue,
+        );
+      });
+
       test('polls until the PR is completed', () async {
         stubOriginUrl('https://dev.azure.com/you/project');
         stubCurrentBranch('feature');
@@ -211,6 +234,26 @@ void main() {
           messages.any((m) => m.contains('Waiting for pull request')),
           isTrue,
         );
+      });
+
+      test('logs the PR url once, so the status can be monitored', () async {
+        stubOriginUrl('https://github.com/me/repo.git');
+        stubCurrentBranch('feature');
+        const pr = '"url":"https://github.com/me/repo/pull/9"';
+        stubSequence('gh', 'list', [
+          ProcessResult(0, 0, '[{"state":"OPEN", $pr}]', ''),
+          ProcessResult(0, 0, '[{"state":"OPEN", $pr}]', ''),
+          ProcessResult(0, 0, '[{"state":"MERGED", $pr}]', ''),
+        ]);
+        final result = await waitForMerge.get(directory: d, ggLog: ggLog);
+        expect(result, isTrue);
+
+        // The url is logged exactly once — not repeated on every poll.
+        final urlLines = messages
+            .where((m) => m.contains('https://github.com/me/repo/pull/9'))
+            .toList();
+        expect(urlLines, hasLength(1));
+        expect(urlLines.first, contains('Check the pull request status here'));
       });
 
       test('throws when the PR was closed without merging', () async {
