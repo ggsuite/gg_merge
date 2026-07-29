@@ -113,13 +113,20 @@ void main() {
       test('creates a PR and sets squash automerge with branch '
           'delete', () async {
         stubOriginUrl('https://github.com/me/repo.git');
+        stubCurrentBranch('feature');
         // No existing PR
         stubGh([
           'pr',
-          'view',
+          'list',
+          '--head',
+          'feature',
+          '--state',
+          'open',
           '--json',
-          'number,url',
-        ], ProcessResult(1, 1, '', ''));
+          'url',
+          '--limit',
+          '1',
+        ], ProcessResult(0, 0, '[]', ''));
         stubGh([
           'pr',
           'create',
@@ -153,12 +160,19 @@ void main() {
 
       test('omits --delete-branch when deleteSourceBranch is false', () async {
         stubOriginUrl('https://github.com/me/repo.git');
+        stubCurrentBranch('feature');
         stubGh([
           'pr',
-          'view',
+          'list',
+          '--head',
+          'feature',
+          '--state',
+          'open',
           '--json',
-          'number,url',
-        ], ProcessResult(1, 1, '', ''));
+          'url',
+          '--limit',
+          '1',
+        ], ProcessResult(0, 0, '[]', ''));
         stubGh([
           'pr',
           'create',
@@ -191,12 +205,19 @@ void main() {
 
       test('uses the message as PR title, body and squash subject', () async {
         stubOriginUrl('https://github.com/me/repo.git');
+        stubCurrentBranch('feature');
         stubGh([
           'pr',
-          'view',
+          'list',
+          '--head',
+          'feature',
+          '--state',
+          'open',
           '--json',
-          'number,url',
-        ], ProcessResult(1, 1, '', ''));
+          'url',
+          '--limit',
+          '1',
+        ], ProcessResult(0, 0, '[]', ''));
         stubGh([
           'pr',
           'create',
@@ -259,13 +280,25 @@ void main() {
 
       test('reuses an existing PR instead of creating a duplicate', () async {
         stubOriginUrl('https://github.com/me/repo.git');
-        // Existing PR
+        stubCurrentBranch('feature');
+        // Existing OPEN PR
         stubGh(
-          ['pr', 'view', '--json', 'number,url'],
+          [
+            'pr',
+            'list',
+            '--head',
+            'feature',
+            '--state',
+            'open',
+            '--json',
+            'url',
+            '--limit',
+            '1',
+          ],
           ProcessResult(
             0,
             0,
-            '{"number":7,"url":"https://github.com/me/repo/pull/7"}',
+            '[{"url":"https://github.com/me/repo/pull/7"}]',
             '',
           ),
         );
@@ -293,14 +326,27 @@ void main() {
         );
       });
 
-      test('tolerates malformed json from gh pr view on reuse', () async {
+      test('creates a new PR when gh pr list output is malformed', () async {
         stubOriginUrl('https://github.com/me/repo.git');
+        stubCurrentBranch('feature');
         stubGh([
           'pr',
-          'view',
+          'list',
+          '--head',
+          'feature',
+          '--state',
+          'open',
           '--json',
-          'number,url',
+          'url',
+          '--limit',
+          '1',
         ], ProcessResult(0, 0, 'not json', ''));
+        stubGh([
+          'pr',
+          'create',
+          '--fill',
+          '--web=false',
+        ], ProcessResult(0, 0, 'https://github.com/me/repo/pull/8\n', ''));
         stubGh([
           'pr',
           'merge',
@@ -316,19 +362,26 @@ void main() {
         );
         expect(result, isTrue);
         expect(
-          messages.any((m) => m.contains('Reusing existing pull request')),
+          messages.any((m) => m.contains('https://github.com/me/repo/pull/8')),
           isTrue,
         );
       });
 
       test('does not merge when automerge is false', () async {
         stubOriginUrl('https://github.com/me/repo.git');
+        stubCurrentBranch('feature');
         stubGh([
           'pr',
-          'view',
+          'list',
+          '--head',
+          'feature',
+          '--state',
+          'open',
           '--json',
-          'number,url',
-        ], ProcessResult(1, 1, '', ''));
+          'url',
+          '--limit',
+          '1',
+        ], ProcessResult(0, 0, '[]', ''));
         stubGh([
           'pr',
           'create',
@@ -354,12 +407,19 @@ void main() {
 
       test('throws when gh pr create fails', () async {
         stubOriginUrl('https://github.com/me/repo.git');
+        stubCurrentBranch('feature');
         stubGh([
           'pr',
-          'view',
+          'list',
+          '--head',
+          'feature',
+          '--state',
+          'open',
           '--json',
-          'number,url',
-        ], ProcessResult(1, 1, '', ''));
+          'url',
+          '--limit',
+          '1',
+        ], ProcessResult(0, 0, '[]', ''));
         stubGh([
           'pr',
           'create',
@@ -380,12 +440,19 @@ void main() {
 
       test('warns instead of throwing when gh pr merge fails', () async {
         stubOriginUrl('https://github.com/me/repo.git');
+        stubCurrentBranch('feature');
         stubGh([
           'pr',
-          'view',
+          'list',
+          '--head',
+          'feature',
+          '--state',
+          'open',
           '--json',
-          'number,url',
-        ], ProcessResult(1, 1, '', ''));
+          'url',
+          '--limit',
+          '1',
+        ], ProcessResult(0, 0, '[]', ''));
         stubGh([
           'pr',
           'create',

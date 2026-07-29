@@ -9,6 +9,12 @@
 ### Changed
 
 - Show the pull request url on create, reuse and while waiting for the merge
+- "Created pull request" / "Reusing existing pull request" messages are printed dark gray (url blue)
+- Reuse only open pull requests; print PR messages dark gray
+
+### Fixed
+
+- PR reuse now only considers OPEN pull requests. Before, a merged pull request of an earlier release on the same branch was "reused", so wait-for-merge saw »merged« immediately although the new release content was never merged to main
 
 ## [1.6.0] - 2026-07-22
 
