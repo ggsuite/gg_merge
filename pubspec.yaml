@@ -1,35 +1,34 @@
 name: gg_merge
 description: Various tools and checks for publishing dart packages, e.g. versioning, checks etc.
 version: 1.6.0
-publish_to: none
 repository: https://github.com/ggsuite/gg_merge.git
 environment:
   sdk: ">=3.8.0 <4.0.0"
 
 dependencies:
-  args: ^2.4.2
+  args: ^2.7.0
 
-  gg_args: ^2.0.1
-  gg_console_colors: ^2.0.1
+  gg_args: ^2.0.5
+  gg_console_colors: ^2.1.5
   gg_git: ^3.1.0
-  gg_is_flutter: ^1.0.6
+  gg_is_flutter: ^1.0.7
   gg_lang: ^0.2.7
-  gg_log: ^1.0.0
-  gg_process: ^1.0.7
-  gg_status_printer: ^1.0.7
+  gg_log: ^1.0.6
+  gg_process: ^1.1.6
+  gg_status_printer: ^1.1.4
 
-  http: ^1.2.1
-  matcher: ^0.12.16+1
-  mocktail: ^1.0.3
-  path: ^1.8.0
-  pub_semver: ^2.1.4
+  http: ^1.6.0
+  matcher: ^0.12.20
+  mocktail: ^1.0.5
+  path: ^1.9.1
+  pub_semver: ^2.2.0
   yaml: ^3.1.3
 
 dev_dependencies:
-  fake_async: ^1.3.1
-  gg_capture_print: ^1.0.3
-  lints: ^6.0.0
-  test: ^1.24.0
+  fake_async: ^1.3.3
+  gg_capture_print: ^1.0.9
+  lints: ^6.1.0
+  test: ^1.31.2
 
 executables:
   gg_merge:

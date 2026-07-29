@@ -13,6 +13,7 @@
 - Reuse only open pull requests; print PR messages dark gray
 - Fall back to a direct squash merge when auto-merge is not allowed
 - Never merge a pull request automatically; pass the PR source branch to the wait
+- Handle auto merge when github does not support auto merge
 
 ### Fixed
 
