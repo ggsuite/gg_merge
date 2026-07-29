@@ -113,8 +113,20 @@ void main() {
       test('creates a PR and sets squash automerge with branch '
           'delete', () async {
         stubOriginUrl('https://github.com/me/repo.git');
+        stubCurrentBranch('feature');
         // No existing PR
-        stubGh(['pr', 'view', '--json', 'number'], ProcessResult(1, 1, '', ''));
+        stubGh([
+          'pr',
+          'list',
+          '--head',
+          'feature',
+          '--state',
+          'open',
+          '--json',
+          'url',
+          '--limit',
+          '1',
+        ], ProcessResult(0, 0, '[]', ''));
         stubGh([
           'pr',
           'create',
@@ -135,11 +147,12 @@ void main() {
           automerge: true,
         );
         expect(result, isTrue);
+        // The url is printed blue, so match the parts around the color code.
         expect(
           messages.any(
-            (m) => m.contains(
-              'Created pull request: https://github.com/me/repo/pull/7',
-            ),
+            (m) =>
+                m.contains('Created pull request:') &&
+                m.contains('https://github.com/me/repo/pull/7'),
           ),
           isTrue,
         );
@@ -147,7 +160,19 @@ void main() {
 
       test('omits --delete-branch when deleteSourceBranch is false', () async {
         stubOriginUrl('https://github.com/me/repo.git');
-        stubGh(['pr', 'view', '--json', 'number'], ProcessResult(1, 1, '', ''));
+        stubCurrentBranch('feature');
+        stubGh([
+          'pr',
+          'list',
+          '--head',
+          'feature',
+          '--state',
+          'open',
+          '--json',
+          'url',
+          '--limit',
+          '1',
+        ], ProcessResult(0, 0, '[]', ''));
         stubGh([
           'pr',
           'create',
@@ -180,7 +205,19 @@ void main() {
 
       test('uses the message as PR title, body and squash subject', () async {
         stubOriginUrl('https://github.com/me/repo.git');
-        stubGh(['pr', 'view', '--json', 'number'], ProcessResult(1, 1, '', ''));
+        stubCurrentBranch('feature');
+        stubGh([
+          'pr',
+          'list',
+          '--head',
+          'feature',
+          '--state',
+          'open',
+          '--json',
+          'url',
+          '--limit',
+          '1',
+        ], ProcessResult(0, 0, '[]', ''));
         stubGh([
           'pr',
           'create',
@@ -243,13 +280,28 @@ void main() {
 
       test('reuses an existing PR instead of creating a duplicate', () async {
         stubOriginUrl('https://github.com/me/repo.git');
-        // Existing PR
-        stubGh([
-          'pr',
-          'view',
-          '--json',
-          'number',
-        ], ProcessResult(0, 0, '{"number":7}', ''));
+        stubCurrentBranch('feature');
+        // Existing OPEN PR
+        stubGh(
+          [
+            'pr',
+            'list',
+            '--head',
+            'feature',
+            '--state',
+            'open',
+            '--json',
+            'url',
+            '--limit',
+            '1',
+          ],
+          ProcessResult(
+            0,
+            0,
+            '[{"url":"https://github.com/me/repo/pull/7"}]',
+            '',
+          ),
+        );
         stubGh([
           'pr',
           'merge',
@@ -268,11 +320,68 @@ void main() {
           messages.any((m) => m.contains('Reusing existing pull request')),
           isTrue,
         );
+        expect(
+          messages.any((m) => m.contains('https://github.com/me/repo/pull/7')),
+          isTrue,
+        );
+      });
+
+      test('creates a new PR when gh pr list output is malformed', () async {
+        stubOriginUrl('https://github.com/me/repo.git');
+        stubCurrentBranch('feature');
+        stubGh([
+          'pr',
+          'list',
+          '--head',
+          'feature',
+          '--state',
+          'open',
+          '--json',
+          'url',
+          '--limit',
+          '1',
+        ], ProcessResult(0, 0, 'not json', ''));
+        stubGh([
+          'pr',
+          'create',
+          '--fill',
+          '--web=false',
+        ], ProcessResult(0, 0, 'https://github.com/me/repo/pull/8\n', ''));
+        stubGh([
+          'pr',
+          'merge',
+          '--auto',
+          '--squash',
+          '--delete-branch',
+        ], ProcessResult(0, 0, '', ''));
+
+        final result = await mergeGit.exec(
+          directory: d,
+          ggLog: ggLog,
+          automerge: true,
+        );
+        expect(result, isTrue);
+        expect(
+          messages.any((m) => m.contains('https://github.com/me/repo/pull/8')),
+          isTrue,
+        );
       });
 
       test('does not merge when automerge is false', () async {
         stubOriginUrl('https://github.com/me/repo.git');
-        stubGh(['pr', 'view', '--json', 'number'], ProcessResult(1, 1, '', ''));
+        stubCurrentBranch('feature');
+        stubGh([
+          'pr',
+          'list',
+          '--head',
+          'feature',
+          '--state',
+          'open',
+          '--json',
+          'url',
+          '--limit',
+          '1',
+        ], ProcessResult(0, 0, '[]', ''));
         stubGh([
           'pr',
           'create',
@@ -298,7 +407,19 @@ void main() {
 
       test('throws when gh pr create fails', () async {
         stubOriginUrl('https://github.com/me/repo.git');
-        stubGh(['pr', 'view', '--json', 'number'], ProcessResult(1, 1, '', ''));
+        stubCurrentBranch('feature');
+        stubGh([
+          'pr',
+          'list',
+          '--head',
+          'feature',
+          '--state',
+          'open',
+          '--json',
+          'url',
+          '--limit',
+          '1',
+        ], ProcessResult(0, 0, '[]', ''));
         stubGh([
           'pr',
           'create',
@@ -319,7 +440,19 @@ void main() {
 
       test('warns instead of throwing when gh pr merge fails', () async {
         stubOriginUrl('https://github.com/me/repo.git');
-        stubGh(['pr', 'view', '--json', 'number'], ProcessResult(1, 1, '', ''));
+        stubCurrentBranch('feature');
+        stubGh([
+          'pr',
+          'list',
+          '--head',
+          'feature',
+          '--state',
+          'open',
+          '--json',
+          'url',
+          '--limit',
+          '1',
+        ], ProcessResult(0, 0, '[]', ''));
         stubGh([
           'pr',
           'create',
@@ -333,7 +466,6 @@ void main() {
           '--squash',
           '--delete-branch',
         ], ProcessResult(3, 3, '', 'auto-merge disabled'));
-
         final result = await mergeGit.get(
           directory: d,
           ggLog: ggLog,
@@ -344,10 +476,68 @@ void main() {
           messages.any(
             (m) =>
                 m.contains('Could not enable auto-merge') &&
-                m.contains('auto-merge disabled'),
+                m.contains('auto-merge disabled') &&
+                m.contains('the publish waits for the merge'),
           ),
           isTrue,
         );
+      });
+
+      test('never merges the pull request itself when auto-merge '
+          'is rejected', () async {
+        stubOriginUrl('https://github.com/me/repo.git');
+        stubCurrentBranch('feature');
+        stubGh([
+          'pr',
+          'list',
+          '--head',
+          'feature',
+          '--state',
+          'open',
+          '--json',
+          'url',
+          '--limit',
+          '1',
+        ], ProcessResult(0, 0, '[]', ''));
+        stubGh([
+          'pr',
+          'create',
+          '--fill',
+          '--web=false',
+        ], ProcessResult(0, 0, '', ''));
+        stubGh([
+          'pr',
+          'merge',
+          '--auto',
+          '--squash',
+          '--delete-branch',
+        ], ProcessResult(1, 1, '', 'Auto merge is not allowed'));
+
+        final result = await mergeGit.get(
+          directory: d,
+          ggLog: ggLog,
+          automerge: true,
+        );
+        expect(result, isTrue);
+
+        // Merging stays a human decision: no plain »gh pr merge« is run.
+        verifyNever(
+          () => processWrapper.run(
+            'gh',
+            any(
+              that: predicate<List<String>>(
+                (args) =>
+                    args.length > 1 &&
+                    args[0] == 'pr' &&
+                    args[1] == 'merge' &&
+                    !args.contains('--auto'),
+              ),
+            ),
+            runInShell: any(named: 'runInShell'),
+            workingDirectory: any(named: 'workingDirectory'),
+          ),
+        );
+        expect(messages.any((m) => m.contains('merge it on GitHub')), isTrue);
       });
     });
 
