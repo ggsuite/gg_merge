@@ -1,6 +1,13 @@
 # Changelog
 
-## [1.6.1] - 2026-07-29
+## 1.7.0 - 2026-07-29
+
+### Changed
+
+- Support projects without manifest: ProjectType.none, checks skipped, version tracked as git tag only
+- gg\_multi: changed references to git
+
+## 1.6.1 - 2026-07-29
 
 ### Added
 
@@ -21,7 +28,7 @@
 - WaitForMerge accepts the pull request's source branch, so the wait no longer looks for a pull request of the default branch when HEAD moved on ("No pull request found for branch main")
 - PR reuse now only considers OPEN pull requests. Before, a merged pull request of an earlier release on the same branch was "reused", so wait-for-merge saw »merged« immediately although the new release content was never merged to main
 
-## [1.6.0] - 2026-07-22
+## 1.6.0 - 2026-07-22
 
 ### Added
 
@@ -33,38 +40,38 @@
 - Share the origin-url lookup, use named arguments in MergeGit internals and unify the best-effort automerge warning
 - gg\_multi: changed references to git
 
-## [1.5.1] - 2026-07-20
+## 1.5.1 - 2026-07-20
 
 ### Changed
 
 - gg\_multi: changed references to git
 
-## [1.5.0] - 2026-07-06
+## 1.5.0 - 2026-07-06
 
 ### Changed
 
 - feat: merge via auto-complete pull request on protected main (Azure) and wait until merged
 
-## [1.4.0] - 2026-07-01
+## 1.4.0 - 2026-07-01
 
 ### Changed
 
 - feat(gg): do checkout + .gg/.ticket.json ticket marker; TS format no direct eslint & P:\programs\flutter/bin/internal/exit\_with\_errorlevel.bat
 - gg\_multi: changed references to git
 
-## [1.3.1] - 2026-06-26
+## 1.3.1 - 2026-06-26
 
 ### Changed
 
 - gg\_multi: changed references to git
 
-## [1.3.0] - 2026-06-19
+## 1.3.0 - 2026-06-19
 
 ### Changed
 
 - gg\_multi: changed references to git
 
-## [1.2.0] - 2026-06-08
+## 1.2.0 - 2026-06-08
 
 ### Changed
 
@@ -73,9 +80,9 @@
 - Gg Multi: changed references to pub.dev
 - gg\_multi: changed references to git
 
-## [1.1.0] - 2026-05-19
+## 1.1.0 - 2026-05-19
 
-## [1.0.5] - 2026-05-19
+## 1.0.5 - 2026-05-19
 
 ### Added
 
@@ -90,7 +97,7 @@ pub-get + lockfile staging step. Useful for tests that drive
 lockfile is part of the squash commit instead of being left dirty by
 VS Code's auto pub get after the fact
 
-## [1.0.4] - 2026-03-26
+## 1.0.4 - 2026-03-26
 
 ### Added
 
@@ -100,17 +107,17 @@ VS Code's auto pub get after the fact
 
 - Remove push to origin/main from local merge and related test
 
-## [1.0.3] - 2025-08-11
+## 1.0.3 - 2025-08-11
 
 - Update to gg\_git 3.0.0
 
-## [1.0.2] - 2025-08-05
+## 1.0.2 - 2025-08-05
 
 ### Removed
 
 - remove has git references from can merge
 
-## [1.0.1] - 2025-08-02
+## 1.0.1 - 2025-08-02
 
 ### Added
 
@@ -121,18 +128,3 @@ VS Code's auto pub get after the fact
 ### Changed
 
 - prepare version 1.0.1
-
-[1.6.1]: https://github.com/ggsuite/gg_merge/compare/1.6.0...1.6.1
-[1.6.0]: https://github.com/ggsuite/gg_merge/compare/1.5.1...1.6.0
-[1.5.1]: https://github.com/ggsuite/gg_merge/compare/1.5.0...1.5.1
-[1.5.0]: https://github.com/ggsuite/gg_merge/compare/1.4.0...1.5.0
-[1.4.0]: https://github.com/ggsuite/gg_merge/compare/1.3.1...1.4.0
-[1.3.1]: https://github.com/ggsuite/gg_merge/compare/1.3.0...1.3.1
-[1.3.0]: https://github.com/ggsuite/gg_merge/compare/1.2.0...1.3.0
-[1.2.0]: https://github.com/ggsuite/gg_merge/compare/1.1.0...1.2.0
-[1.1.0]: https://github.com/inlavigo/gg_merge/compare/1.0.5...1.1.0
-[1.0.5]: https://github.com/inlavigo/gg_merge/compare/1.0.4...1.0.5
-[1.0.4]: https://github.com/inlavigo/gg_merge/compare/1.0.3...1.0.4
-[1.0.3]: https://github.com/inlavigo/gg_merge/compare/1.0.2...1.0.3
-[1.0.2]: https://github.com/inlavigo/gg_merge/compare/1.0.1...1.0.2
-[1.0.1]: https://github.com/inlavigo/gg_merge/tag/%tag
