@@ -94,6 +94,13 @@ void main() {
           ProcessResult(
             0,
             0,
+            '[{"pullRequestId":42,"status":"active",'
+                '"repository":{"webUrl":"https://dev.azure.com/o/p/_git/r"}}]',
+            '',
+          ),
+          ProcessResult(
+            0,
+            0,
             '[{"pullRequestId":42,"status":"completed",'
                 '"repository":{"webUrl":"https://dev.azure.com/o/p/_git/r"}}]',
             '',
@@ -120,8 +127,25 @@ void main() {
         final result = await waitForMerge.get(directory: d, ggLog: ggLog);
         expect(result, isTrue);
         expect(
-          messages.any((m) => m.contains('Waiting for pull request')),
-          isTrue,
+          messages,
+          contains('⌛️ Please open and merge pull request (feature).'),
+        );
+      });
+
+      test('asks to merge only once, no matter how long it polls', () async {
+        stubOriginUrl('https://dev.azure.com/you/project');
+        stubCurrentBranch('feature');
+        stubSequence('az', 'list', [
+          ProcessResult(0, 0, '[{"pullRequestId":1,"status":"active"}]', ''),
+          ProcessResult(0, 0, '[{"pullRequestId":1,"status":"active"}]', ''),
+          ProcessResult(0, 0, '[{"pullRequestId":1,"status":"active"}]', ''),
+          ProcessResult(0, 0, '[{"pullRequestId":1,"status":"completed"}]', ''),
+        ]);
+        final result = await waitForMerge.get(directory: d, ggLog: ggLog);
+        expect(result, isTrue);
+        expect(
+          messages.where((m) => m.contains('Please open and merge')),
+          hasLength(1),
         );
       });
 
@@ -231,8 +255,25 @@ void main() {
         final result = await waitForMerge.get(directory: d, ggLog: ggLog);
         expect(result, isTrue);
         expect(
-          messages.any((m) => m.contains('Waiting for pull request')),
-          isTrue,
+          messages,
+          contains('⌛️ Please open and merge pull request (feature).'),
+        );
+      });
+
+      test('asks to merge only once, no matter how long it polls', () async {
+        stubOriginUrl('https://github.com/me/repo.git');
+        stubCurrentBranch('feature');
+        stubSequence('gh', 'list', [
+          ProcessResult(0, 0, '[{"state":"OPEN"}]', ''),
+          ProcessResult(0, 0, '[{"state":"OPEN"}]', ''),
+          ProcessResult(0, 0, '[{"state":"OPEN"}]', ''),
+          ProcessResult(0, 0, '[{"state":"MERGED"}]', ''),
+        ]);
+        final result = await waitForMerge.get(directory: d, ggLog: ggLog);
+        expect(result, isTrue);
+        expect(
+          messages.where((m) => m.contains('Please open and merge')),
+          hasLength(1),
         );
       });
 
