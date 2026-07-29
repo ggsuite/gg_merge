@@ -7,6 +7,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:gg_args/gg_args.dart';
+import 'package:gg_console_colors/gg_console_colors.dart';
 import 'package:gg_log/gg_log.dart';
 import 'package:gg_process/gg_process.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
@@ -52,8 +53,18 @@ class WaitForMerge extends DirCommand<bool> {
   }
 
   /// Blocks until the pull request of the current branch is merged.
+  ///
+  /// [branch] names the source branch of the pull request. Pass it whenever
+  /// the caller knows it — HEAD may have moved on to the default branch by
+  /// the time the wait starts (e.g. a merge that deleted the feature branch
+  /// checked out main), and searching for a pull request of the default
+  /// branch would fail with a misleading "no pull request found".
   @override
-  Future<bool> get({required Directory directory, required GgLog ggLog}) async {
+  Future<bool> get({
+    required Directory directory,
+    required GgLog ggLog,
+    String? branch,
+  }) async {
     final remoteUrl = await readOriginUrl(
       directory: directory,
       processWrapper: _processWrapper,
@@ -62,7 +73,7 @@ class WaitForMerge extends DirCommand<bool> {
       throw Exception('git config failed: could not read remote.origin.url');
     }
     final provider = providerFromRemoteUrl(remoteUrl);
-    final branch = await _currentBranch(directory);
+    branch ??= await _currentBranch(directory);
     switch (provider) {
       case GitProvider.github:
         return _waitGitHub(directory, branch, ggLog);
@@ -86,14 +97,27 @@ class WaitForMerge extends DirCommand<bool> {
     return result.stdout.toString().trim();
   }
 
+  /// Logs the web page of the pull request once, so its status can be
+  /// monitored directly in the browser while gg waits for the merge.
+  void _logPrUrlOnce(GgLog ggLog, String? url, Set<String> logged) {
+    if (url == null || url.isEmpty || logged.contains(url)) {
+      return;
+    }
+    logged.add(url);
+    ggLog('${darkGray('Check the pull request status here:')} ${blue(url)}');
+  }
+
   // ...........................................................................
   Future<bool> _waitAzure(
     Directory directory,
     String branch,
     GgLog ggLog,
   ) async {
+    final loggedUrls = <String>{};
     while (true) {
-      final status = await _azurePrStatus(directory, branch);
+      final pr = await _azurePr(directory, branch);
+      _logPrUrlOnce(ggLog, pr.url, loggedUrls);
+      final status = pr.status;
       if (status == 'completed') {
         ggLog('✅ Pull request for $branch merged.');
         return true;
@@ -112,7 +136,10 @@ class WaitForMerge extends DirCommand<bool> {
     }
   }
 
-  Future<String?> _azurePrStatus(Directory directory, String branch) async {
+  Future<({String? status, String? url})> _azurePr(
+    Directory directory,
+    String branch,
+  ) async {
     final result = await _processWrapper.run(
       'az',
       [
@@ -134,11 +161,11 @@ class WaitForMerge extends DirCommand<bool> {
     }
     final out = result.stdout.toString().trim();
     if (out.isEmpty) {
-      return null;
+      return (status: null, url: null);
     }
     final decoded = jsonDecode(out);
     if (decoded is! List || decoded.isEmpty) {
-      return null;
+      return (status: null, url: null);
     }
     // Pick the newest PR (highest id) matching the branch.
     Map<dynamic, dynamic>? newest;
@@ -152,7 +179,15 @@ class WaitForMerge extends DirCommand<bool> {
         }
       }
     }
-    return newest?['status']?.toString();
+
+    // The web page of the PR: <repository.webUrl>/pullrequest/<id>.
+    final repository = newest?['repository'];
+    final webUrl = repository is Map ? repository['webUrl']?.toString() : null;
+    final url = (webUrl == null || newest == null)
+        ? null
+        : '$webUrl/pullrequest/${newest['pullRequestId']}';
+
+    return (status: newest?['status']?.toString(), url: url);
   }
 
   // ...........................................................................
@@ -161,8 +196,11 @@ class WaitForMerge extends DirCommand<bool> {
     String branch,
     GgLog ggLog,
   ) async {
+    final loggedUrls = <String>{};
     while (true) {
-      final state = await _gitHubPrState(directory, branch);
+      final pr = await _gitHubPr(directory, branch);
+      _logPrUrlOnce(ggLog, pr.url, loggedUrls);
+      final state = pr.state;
       if (state == 'MERGED') {
         ggLog('✅ Pull request for $branch merged.');
         return true;
@@ -181,7 +219,10 @@ class WaitForMerge extends DirCommand<bool> {
     }
   }
 
-  Future<String?> _gitHubPrState(Directory directory, String branch) async {
+  Future<({String? state, String? url})> _gitHubPr(
+    Directory directory,
+    String branch,
+  ) async {
     final result = await _processWrapper.run(
       'gh',
       [
@@ -192,7 +233,7 @@ class WaitForMerge extends DirCommand<bool> {
         '--state',
         'all',
         '--json',
-        'state',
+        'state,url',
         '--limit',
         '1',
       ],
@@ -204,17 +245,17 @@ class WaitForMerge extends DirCommand<bool> {
     }
     final out = result.stdout.toString().trim();
     if (out.isEmpty) {
-      return null;
+      return (state: null, url: null);
     }
     final decoded = jsonDecode(out);
     if (decoded is! List || decoded.isEmpty) {
-      return null;
+      return (state: null, url: null);
     }
     final first = decoded.first;
     if (first is Map) {
-      return first['state']?.toString();
+      return (state: first['state']?.toString(), url: first['url']?.toString());
     }
-    return null;
+    return (state: null, url: null);
   }
 }
 

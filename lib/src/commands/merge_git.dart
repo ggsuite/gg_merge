@@ -7,6 +7,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:gg_args/gg_args.dart';
+import 'package:gg_console_colors/gg_console_colors.dart';
 import 'package:gg_log/gg_log.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
 import 'package:gg_process/gg_process.dart';
@@ -141,9 +142,17 @@ class MergeGit extends DirCommand<bool> {
     required bool deleteSourceBranch,
     required String? message,
   }) async {
-    // Reuse an existing PR for the current branch to stay idempotent.
-    if (await _gitHubPrExists(directory)) {
-      ggLog('Reusing existing pull request for the current branch.');
+    // Reuse an existing OPEN PR for the current branch to stay idempotent.
+    // Merged/closed PRs of the same branch (an earlier release of a reused
+    // ticket branch) must not be reused: the wait-for-merge step would see
+    // »merged« immediately although the new release content never made it
+    // to main.
+    final branch = await _currentBranch(directory);
+    final existingUrl = await _gitHubOpenPrUrl(directory, branch);
+    if (existingUrl != null) {
+      // Surface the PR page so its status can be monitored directly.
+      final urlHint = existingUrl.isEmpty ? '' : ' ${blue(existingUrl)}';
+      ggLog('${darkGray('Reusing existing pull request:')}$urlHint');
     } else {
       final result = await _processWrapper.run(
         'gh',
@@ -162,10 +171,11 @@ class MergeGit extends DirCommand<bool> {
       if (result.exitCode != 0) {
         throw Exception('gh pr create failed: ${result.stderr}');
       }
-      // gh prints the PR url — surface it so a manual merge is one click away.
+      // gh prints the PR url — surface it so its status can be monitored
+      // directly and a manual merge is one click away.
       final url = result.stdout.toString().trim();
       if (url.isNotEmpty) {
-        ggLog('Created pull request: $url');
+        ggLog('${darkGray('Created pull request:')} ${blue(url)}');
       }
     }
 
@@ -186,7 +196,10 @@ class MergeGit extends DirCommand<bool> {
       );
       if (mergeResult.exitCode != 0) {
         // Auto-merge can be unavailable (repo setting "Allow auto-merge" off,
-        // squash merges disabled, or no pending requirements).
+        // squash merges disabled, or no pending requirements). gg never
+        // merges such a pull request on its own: the merge stays an explicit
+        // human decision. The PR is left open and [WaitForMerge] blocks until
+        // it is merged manually.
         _warnAutomergeUnavailable(
           ggLog: ggLog,
           providerName: 'GitHub',
@@ -213,14 +226,40 @@ class MergeGit extends DirCommand<bool> {
     );
   }
 
-  Future<bool> _gitHubPrExists(Directory directory) async {
+  /// Returns the web url of an OPEN pull request for [branch], or null when
+  /// no open PR exists (a new one must be created then). An unreadable
+  /// `gh pr list` output is treated as "no open PR" — creating the PR then
+  /// surfaces the actual problem with a precise error.
+  Future<String?> _gitHubOpenPrUrl(Directory directory, String branch) async {
     final result = await _processWrapper.run(
       'gh',
-      ['pr', 'view', '--json', 'number'],
+      [
+        'pr',
+        'list',
+        '--head',
+        branch,
+        '--state',
+        'open',
+        '--json',
+        'url',
+        '--limit',
+        '1',
+      ],
       runInShell: true,
       workingDirectory: directory.path,
     );
-    return result.exitCode == 0;
+    if (result.exitCode != 0) {
+      return null;
+    }
+    try {
+      final decoded = jsonDecode(result.stdout.toString().trim());
+      if (decoded is List && decoded.isNotEmpty && decoded.first is Map) {
+        return (decoded.first as Map)['url']?.toString() ?? '';
+      }
+      return null;
+    } on FormatException {
+      return null;
+    }
   }
 
   Future<void> _createAzureDevOpsPR(
@@ -235,7 +274,7 @@ class MergeGit extends DirCommand<bool> {
     var prId = await _existingAzurePrId(directory, branch);
 
     if (prId != null) {
-      ggLog('Reusing existing pull request !$prId for $branch.');
+      ggLog(darkGray('Reusing existing pull request !$prId for $branch.'));
     } else {
       // Create the PR plain and set auto-complete separately: completion
       // options on `az repos pr create` fail as a whole when the policy
@@ -258,7 +297,7 @@ class MergeGit extends DirCommand<bool> {
       }
       prId = _prIdFromCreateOutput(result.stdout.toString());
       if (prId != null) {
-        ggLog('Created pull request !$prId for $branch.');
+        ggLog(darkGray('Created pull request !$prId for $branch.'));
       }
     }
 

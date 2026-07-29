@@ -6,6 +6,27 @@
 
 - Support projects without manifest: ProjectType.none, checks skipped, version tracked as git tag only
 
+## [1.6.1] - 2026-07-29
+
+### Added
+
+- The pull request url is now surfaced everywhere the publish interacts with a PR: when it is created, when an existing PR is reused, and once at the start of the wait-for-merge poll ("Check the pull request status here: <url>", printed blue) — on GitHub from `gh`, on Azure DevOps built from `repository.webUrl`
+
+### Changed
+
+- Show the pull request url on create, reuse and while waiting for the merge
+- "Created pull request" / "Reusing existing pull request" messages are printed dark gray (url blue)
+- Reuse only open pull requests; print PR messages dark gray
+- Fall back to a direct squash merge when auto-merge is not allowed
+- Never merge a pull request automatically; pass the PR source branch to the wait
+- Handle auto merge when github does not support auto merge
+
+### Fixed
+
+- gg never merges a pull request on its own: when the provider rejects auto-merge, the PR stays open and the publish waits for the manual merge (the merge stays an explicit human decision)
+- WaitForMerge accepts the pull request's source branch, so the wait no longer looks for a pull request of the default branch when HEAD moved on ("No pull request found for branch main")
+- PR reuse now only considers OPEN pull requests. Before, a merged pull request of an earlier release on the same branch was "reused", so wait-for-merge saw »merged« immediately although the new release content was never merged to main
+
 ## [1.6.0] - 2026-07-22
 
 ### Added
@@ -107,7 +128,8 @@ VS Code's auto pub get after the fact
 
 - prepare version 1.0.1
 
-[Unreleased]: https://github.com/ggsuite/gg_merge/compare/1.6.0...HEAD
+[Unreleased]: https://github.com/ggsuite/gg_merge/compare/1.6.1...HEAD
+[1.6.1]: https://github.com/ggsuite/gg_merge/compare/1.6.0...1.6.1
 [1.6.0]: https://github.com/ggsuite/gg_merge/compare/1.5.1...1.6.0
 [1.5.1]: https://github.com/ggsuite/gg_merge/compare/1.5.0...1.5.1
 [1.5.0]: https://github.com/ggsuite/gg_merge/compare/1.4.0...1.5.0
