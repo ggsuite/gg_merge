@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Support projects without manifest: ProjectType.none, checks skipped, version tracked as git tag only
+
 ## [1.6.0] - 2026-07-22
 
 ### Added
@@ -101,6 +107,7 @@ VS Code's auto pub get after the fact
 
 - prepare version 1.0.1
 
+[Unreleased]: https://github.com/ggsuite/gg_merge/compare/1.6.0...HEAD
 [1.6.0]: https://github.com/ggsuite/gg_merge/compare/1.5.1...1.6.0
 [1.5.1]: https://github.com/ggsuite/gg_merge/compare/1.5.0...1.5.1
 [1.5.0]: https://github.com/ggsuite/gg_merge/compare/1.4.0...1.5.0

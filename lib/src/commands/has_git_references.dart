@@ -45,23 +45,15 @@ class HasGitReferences extends DirCommand<bool> {
   /// Returns true if the manifest contains at least one git reference.
   @override
   Future<bool> get({required Directory directory, required GgLog ggLog}) async {
-    final ProjectType type;
-    try {
-      type = detectProjectType(directory);
-    } catch (_) {
-      throw ArgumentError(
-        'No package manifest found in "${directory.path}". '
-        'Expected pubspec.yaml (Dart/Flutter) or '
-        'package.json + tsconfig.json (TypeScript).',
-      );
-    }
-
-    switch (type) {
+    switch (detectProjectType(directory)) {
       case ProjectType.dart:
       case ProjectType.flutter:
         return _checkPubspec(directory);
       case ProjectType.typescript:
         return _checkPackageJson(directory);
+      case ProjectType.none:
+        // Without a manifest there are no dependency references at all.
+        return false;
     }
   }
 

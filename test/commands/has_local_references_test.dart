@@ -27,11 +27,9 @@ void main() {
     });
     tearDown(() async => d.delete(recursive: true));
 
-    test('throws ArgumentError if no manifest is found', () async {
-      expect(
-        () => hasLocalReferences.exec(directory: d, ggLog: ggLog),
-        throwsA(isA<ArgumentError>()),
-      );
+    test('returns false if no manifest is found', () async {
+      final result = await hasLocalReferences.exec(directory: d, ggLog: ggLog);
+      expect(result, isFalse);
     });
 
     test('returns false if no path: references are found', () async {
