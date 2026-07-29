@@ -20,6 +20,9 @@ import '../util/command_helpers.dart';
 /// release cannot continue until the server merged the PR. This command blocks
 /// — polling in [pollInterval] steps — until the PR is completed/merged. It
 /// throws when the PR was abandoned/closed without merging.
+///
+/// A still-open pull request asks the user to merge it — once, together with
+/// the pull request url. The polling itself stays silent from there on.
 class WaitForMerge extends DirCommand<bool> {
   /// Creates a [WaitForMerge] command
   WaitForMerge({
@@ -97,14 +100,17 @@ class WaitForMerge extends DirCommand<bool> {
     return result.stdout.toString().trim();
   }
 
-  /// Logs the web page of the pull request once, so its status can be
-  /// monitored directly in the browser while gg waits for the merge.
-  void _logPrUrlOnce(GgLog ggLog, String? url, Set<String> logged) {
-    if (url == null || url.isEmpty || logged.contains(url)) {
-      return;
+  /// Asks the user to merge the pull request of [branch] and points to its
+  /// web page, so the merge can be done right away in the browser.
+  ///
+  /// Called once per wait, not on every poll: gg has no way to speed the
+  /// merge up, so repeating the same request every [pollInterval] only
+  /// buries the rest of the publish output.
+  void _askToMerge(GgLog ggLog, String branch, String? url) {
+    ggLog('⌛️ Please open and merge pull request ($branch).');
+    if (url != null && url.isNotEmpty) {
+      ggLog('${darkGray('Check the pull request status here:')} ${blue(url)}');
     }
-    logged.add(url);
-    ggLog('${darkGray('Check the pull request status here:')} ${blue(url)}');
   }
 
   // ...........................................................................
@@ -113,10 +119,9 @@ class WaitForMerge extends DirCommand<bool> {
     String branch,
     GgLog ggLog,
   ) async {
-    final loggedUrls = <String>{};
+    var asked = false;
     while (true) {
       final pr = await _azurePr(directory, branch);
-      _logPrUrlOnce(ggLog, pr.url, loggedUrls);
       final status = pr.status;
       if (status == 'completed') {
         ggLog('✅ Pull request for $branch merged.');
@@ -128,10 +133,10 @@ class WaitForMerge extends DirCommand<bool> {
       if (status == null) {
         throw Exception('No pull request found for branch $branch.');
       }
-      ggLog(
-        '⌛️ Waiting for pull request ($branch) to be merged '
-        '(status: $status)...',
-      );
+      if (!asked) {
+        asked = true;
+        _askToMerge(ggLog, branch, pr.url);
+      }
       await _delay(_pollInterval);
     }
   }
@@ -196,10 +201,9 @@ class WaitForMerge extends DirCommand<bool> {
     String branch,
     GgLog ggLog,
   ) async {
-    final loggedUrls = <String>{};
+    var asked = false;
     while (true) {
       final pr = await _gitHubPr(directory, branch);
-      _logPrUrlOnce(ggLog, pr.url, loggedUrls);
       final state = pr.state;
       if (state == 'MERGED') {
         ggLog('✅ Pull request for $branch merged.');
@@ -211,10 +215,10 @@ class WaitForMerge extends DirCommand<bool> {
       if (state == null) {
         throw Exception('No pull request found for branch $branch.');
       }
-      ggLog(
-        '⌛️ Waiting for pull request ($branch) to be merged '
-        '(state: $state)...',
-      );
+      if (!asked) {
+        asked = true;
+        _askToMerge(ggLog, branch, pr.url);
+      }
       await _delay(_pollInterval);
     }
   }
