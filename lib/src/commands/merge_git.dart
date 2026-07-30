@@ -181,7 +181,7 @@ class MergeGit extends DirCommand<bool> {
 
     // Merge if automerge
     if (automerge) {
-      final mergeResult = await _processWrapper.run(
+      await _processWrapper.run(
         'gh',
         [
           'pr',
@@ -194,36 +194,14 @@ class MergeGit extends DirCommand<bool> {
         runInShell: true,
         workingDirectory: directory.path,
       );
-      if (mergeResult.exitCode != 0) {
-        // Auto-merge can be unavailable (repo setting "Allow auto-merge" off,
-        // squash merges disabled, or no pending requirements). gg never
-        // merges such a pull request on its own: the merge stays an explicit
-        // human decision. The PR is left open and [WaitForMerge] blocks until
-        // it is merged manually.
-        _warnAutomergeUnavailable(
-          ggLog: ggLog,
-          providerName: 'GitHub',
-          reason:
-              'Could not enable auto-merge '
-              '(${mergeResult.stderr.toString().trim()}).',
-        );
-      }
+      // A failing `gh pr merge --auto` is not an error: auto-merge can be
+      // unavailable (repo setting "Allow auto-merge" off, squash merges
+      // disabled, or no pending requirements). gg never merges such a pull
+      // request on its own — the merge stays an explicit human decision.
+      // The PR is left open and [WaitForMerge] blocks until it is merged
+      // manually, asking the user for exactly that. Logging the reason here
+      // would only duplicate that request.
     }
-  }
-
-  /// Logs the shared best-effort automerge policy: enabling automerge never
-  /// fails the publish — the pull request stays open for a manual merge and
-  /// [WaitForMerge] keeps waiting.
-  void _warnAutomergeUnavailable({
-    required GgLog ggLog,
-    required String providerName,
-    required String reason,
-  }) {
-    ggLog(
-      '⚠️ $reason '
-      'The pull request stays open — merge it on $providerName; '
-      'the publish waits for the merge.',
-    );
   }
 
   /// Returns the web url of an OPEN pull request for [branch], or null when
@@ -302,14 +280,10 @@ class MergeGit extends DirCommand<bool> {
     }
 
     if (automerge) {
+      // Without the pull request id auto-complete cannot be set. Like a
+      // failing auto-merge on GitHub this is not an error: the PR stays open
+      // and [WaitForMerge] asks the user to merge it.
       if (prId == null) {
-        _warnAutomergeUnavailable(
-          ggLog: ggLog,
-          providerName: 'Azure DevOps',
-          reason:
-              'Could not determine the pull request id — auto-complete '
-              'was not set.',
-        );
         return;
       }
       await _setAzureAutoComplete(
@@ -380,7 +354,7 @@ class MergeGit extends DirCommand<bool> {
     required bool deleteSourceBranch,
     required String? message,
   }) async {
-    final result = await _processWrapper.run(
+    await _processWrapper.run(
       'az',
       [
         'repos',
@@ -398,17 +372,8 @@ class MergeGit extends DirCommand<bool> {
       runInShell: true,
       workingDirectory: directory.path,
     );
-    if (result.exitCode == 0) {
-      return;
-    }
-
-    _warnAutomergeUnavailable(
-      ggLog: ggLog,
-      providerName: 'Azure DevOps',
-      reason:
-          'Could not enable auto-complete '
-          '(${result.stderr.toString().trim()}).',
-    );
+    // A failing auto-complete leaves the pull request open for a manual
+    // merge — [WaitForMerge] asks for it. No extra log needed here.
   }
 
   void _addArgs() {

@@ -127,8 +127,12 @@ void main() {
         final result = await waitForMerge.get(directory: d, ggLog: ggLog);
         expect(result, isTrue);
         expect(
-          messages,
-          contains('⌛️ Please open and merge pull request (feature).'),
+          messages.any(
+            (m) =>
+                m.contains('Please open and merge') &&
+                m.contains('the pull request of feature'),
+          ),
+          isTrue,
         );
       });
 
@@ -255,8 +259,12 @@ void main() {
         final result = await waitForMerge.get(directory: d, ggLog: ggLog);
         expect(result, isTrue);
         expect(
-          messages,
-          contains('⌛️ Please open and merge pull request (feature).'),
+          messages.any(
+            (m) =>
+                m.contains('Please open and merge') &&
+                m.contains('the pull request of feature'),
+          ),
+          isTrue,
         );
       });
 
@@ -319,7 +327,7 @@ void main() {
             .where((m) => m.contains('https://github.com/me/repo/pull/9'))
             .toList();
         expect(urlLines, hasLength(1));
-        expect(urlLines.first, contains('Check the pull request status here'));
+        expect(urlLines.first, contains('Please open and merge'));
       });
 
       test('throws when the PR was closed without merging', () async {

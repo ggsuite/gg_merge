@@ -110,7 +110,6 @@ class DoMerge extends DirCommand<bool> {
         deleteSourceBranch: deleteSourceBranch,
         message: message,
       );
-      ggLog('✅ Merge operation successfully started.');
     }
     return true;
   }
