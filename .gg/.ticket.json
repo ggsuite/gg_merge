@@ -1,0 +1,10 @@
+{
+  "issue_id": "27_better_merge_on_github_message",
+  "description": "Improve merge on github message",
+  "repositories": [
+    {
+      "name": "gg_merge",
+      "url": "git@github.com:ggsuite/gg_merge.git"
+    }
+  ]
+}
