@@ -472,15 +472,9 @@ void main() {
           automerge: true,
         );
         expect(result, isTrue);
-        expect(
-          messages.any(
-            (m) =>
-                m.contains('Could not enable auto-merge') &&
-                m.contains('auto-merge disabled') &&
-                m.contains('the publish waits for the merge'),
-          ),
-          isTrue,
-        );
+        // Not an error and not worth a log line: the pull request stays
+        // open and WaitForMerge asks the user to merge it.
+        expect(messages.any((m) => m.contains('auto-merge')), isFalse);
       });
 
       test('never merges the pull request itself when auto-merge '
@@ -537,7 +531,7 @@ void main() {
             workingDirectory: any(named: 'workingDirectory'),
           ),
         );
-        expect(messages.any((m) => m.contains('merge it on GitHub')), isTrue);
+        expect(messages, isEmpty);
       });
     });
 
@@ -618,27 +612,27 @@ void main() {
         );
       });
 
-      test('warns when the policy rejects the squash strategy', () async {
-        stubOriginUrl('https://dev.azure.com/you/project');
-        stubCurrentBranch('feature');
-        stubAz('list', ProcessResult(0, 0, '[]', ''));
-        stubAz('create', ProcessResult(0, 0, '{"pullRequestId":7}', ''));
-        stubAzExact(
-          azUpdateArgs(id: '7'),
-          ProcessResult(1, 1, '', 'Merge strategy is not alowed by policy'),
-        );
+      test(
+        'does not fail when the policy rejects the squash strategy',
+        () async {
+          stubOriginUrl('https://dev.azure.com/you/project');
+          stubCurrentBranch('feature');
+          stubAz('list', ProcessResult(0, 0, '[]', ''));
+          stubAz('create', ProcessResult(0, 0, '{"pullRequestId":7}', ''));
+          stubAzExact(
+            azUpdateArgs(id: '7'),
+            ProcessResult(1, 1, '', 'Merge strategy is not alowed by policy'),
+          );
 
-        final result = await mergeGit.get(
-          directory: d,
-          ggLog: ggLog,
-          automerge: true,
-        );
-        expect(result, isTrue);
-        expect(
-          messages.any((m) => m.contains('Could not enable auto-complete')),
-          isTrue,
-        );
-      });
+          final result = await mergeGit.get(
+            directory: d,
+            ggLog: ggLog,
+            automerge: true,
+          );
+          expect(result, isTrue);
+          expect(messages.any((m) => m.contains('auto-complete')), isFalse);
+        },
+      );
 
       test('passes the message as PR title and merge commit message', () async {
         stubOriginUrl('https://dev.azure.com/you/project');
@@ -691,7 +685,7 @@ void main() {
         ).called(1);
       });
 
-      test('warns instead of throwing on a generic update failure', () async {
+      test('does not throw on a generic update failure', () async {
         stubOriginUrl('https://dev.azure.com/xyz');
         stubCurrentBranch('feature');
         stubAz(
@@ -706,46 +700,37 @@ void main() {
           automerge: true,
         );
         expect(result, isTrue);
-        expect(
-          messages.any(
-            (m) =>
-                m.contains('Could not enable auto-complete') &&
-                m.contains('update-fail'),
-          ),
-          isTrue,
-        );
+        expect(messages.any((m) => m.contains('update-fail')), isFalse);
       });
 
-      test('warns when the created PR id cannot be determined', () async {
-        for (final stdout in ['', 'not-json', '{"other":1}']) {
-          messages.clear();
-          stubOriginUrl('https://dev.azure.com/you/project');
-          stubCurrentBranch('feature');
-          stubAz('list', ProcessResult(0, 0, '[]', ''));
-          stubAz('create', ProcessResult(0, 0, stdout, ''));
+      test(
+        'skips auto-complete when the created PR id cannot be determined',
+        () async {
+          for (final stdout in ['', 'not-json', '{"other":1}']) {
+            messages.clear();
+            stubOriginUrl('https://dev.azure.com/you/project');
+            stubCurrentBranch('feature');
+            stubAz('list', ProcessResult(0, 0, '[]', ''));
+            stubAz('create', ProcessResult(0, 0, stdout, ''));
 
-          final result = await mergeGit.get(
-            directory: d,
-            ggLog: ggLog,
-            automerge: true,
-          );
-          expect(result, isTrue);
-          expect(
-            messages.any(
-              (m) => m.contains('Could not determine the pull request id'),
-            ),
-            isTrue,
-          );
-          verifyNever(
-            () => processWrapper.run(
-              'az',
-              any(that: contains('update')),
-              runInShell: true,
-              workingDirectory: d.path,
-            ),
-          );
-        }
-      });
+            final result = await mergeGit.get(
+              directory: d,
+              ggLog: ggLog,
+              automerge: true,
+            );
+            expect(result, isTrue);
+            expect(messages.any((m) => m.contains('pull request id')), isFalse);
+            verifyNever(
+              () => processWrapper.run(
+                'az',
+                any(that: contains('update')),
+                runInShell: true,
+                workingDirectory: d.path,
+              ),
+            );
+          }
+        },
+      );
 
       test('reuses an existing PR and (re)sets auto-complete', () async {
         stubOriginUrl('https://dev.azure.com/you/project');

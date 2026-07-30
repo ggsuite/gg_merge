@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Improve merge on github message
+
 ## 1.7.1 - 2026-07-29
 
 ### Changed

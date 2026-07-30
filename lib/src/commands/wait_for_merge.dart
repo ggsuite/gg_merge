@@ -107,10 +107,10 @@ class WaitForMerge extends DirCommand<bool> {
   /// merge up, so repeating the same request every [pollInterval] only
   /// buries the rest of the publish output.
   void _askToMerge(GgLog ggLog, String branch, String? url) {
-    ggLog('⌛️ Please open and merge pull request ($branch).');
-    if (url != null && url.isNotEmpty) {
-      ggLog('${darkGray('Check the pull request status here:')} ${blue(url)}');
-    }
+    final target = url != null && url.isNotEmpty
+        ? blue(url)
+        : 'the pull request of $branch';
+    ggLog('${yellow('Please open and merge ')}$target');
   }
 
   // ...........................................................................
