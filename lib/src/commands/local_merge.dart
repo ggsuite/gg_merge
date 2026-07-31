@@ -93,7 +93,7 @@ class LocalMerge extends DirCommand<bool> {
     }
 
     // Commit with provided message or default
-    final commitMessage = message ?? 'Merged $currentBranch into main';
+    final commitMessage = message ?? '#gg: Merged $currentBranch into main';
     final commitResult = await _run(
       'git',
       ['commit', '-m', commitMessage],
