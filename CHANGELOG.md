@@ -1,10 +1,10 @@
 # Changelog
 
-## Unreleased
+## 2.0.0 - 2026-07-31
 
 ### Changed
 
-- Prefix all gg-generated commit messages with &quot;#gg: &quot;; the unchanged-repo check treats such commits as not user generated
+- Prefix all gg-generated commit messages with "#gg: "; the unchanged-repo check treats such commits as not user generated
 
 ## 1.7.2 - 2026-07-30
 
