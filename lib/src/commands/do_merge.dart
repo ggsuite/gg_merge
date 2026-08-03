@@ -5,9 +5,11 @@
 // found in the LICENSE file in the root of this package.
 
 import 'dart:io';
-import 'package:gg_merge/gg_merge.dart';
+
 import 'package:gg_args/gg_args.dart';
+import 'package:gg_console_colors/gg_console_colors.dart';
 import 'package:gg_log/gg_log.dart';
+import 'package:gg_merge/gg_merge.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
 
 /// Orchestrates check/merge.
@@ -103,7 +105,7 @@ class DoMerge extends DirCommand<bool> {
         message: message,
         verbose: verbose,
       );
-      ggLog('✅ Local merge operation successfully completed.');
+      ggLog(cDetail('✓ Local merge operation successfully completed.'));
     } else {
       await _mergeGit.get(
         directory: directory,

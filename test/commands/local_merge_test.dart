@@ -90,7 +90,10 @@ void main() {
 
       final result = await localMerge.exec(directory: d, ggLog: ggLog);
       expect(result, isTrue);
-      expect(messages, contains('✅ Local merge successful.'));
+      expect(
+        messages.any((m) => m.contains('✓ Local merge successful.')),
+        isTrue,
+      );
     });
 
     test('performs successful local merge with custom message', () async {
@@ -105,7 +108,10 @@ void main() {
         message: 'Custom merge message',
       );
       expect(result, isTrue);
-      expect(messages, contains('✅ Local merge successful.'));
+      expect(
+        messages.any((m) => m.contains('✓ Local merge successful.')),
+        isTrue,
+      );
     });
 
     test('does not run pub get or stage pubspec.lock', () async {

@@ -6,11 +6,13 @@
 
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:gg_args/gg_args.dart';
 import 'package:gg_console_colors/gg_console_colors.dart';
 import 'package:gg_log/gg_log.dart';
-import 'package:gg_status_printer/gg_status_printer.dart';
 import 'package:gg_process/gg_process.dart';
+import 'package:gg_status_printer/gg_status_printer.dart';
+
 import '../util/command_helpers.dart';
 
 /// Performs a merge/pull-request on GitHub or Azure DevOps.
@@ -151,7 +153,7 @@ class MergeGit extends DirCommand<bool> {
     if (existingUrl != null) {
       // Surface the PR page so its status can be monitored directly.
       final urlHint = existingUrl.isEmpty ? '' : ' ${blue(existingUrl)}';
-      ggLog('${darkGray('Reusing existing pull request:')}$urlHint');
+      ggLog('${cDetail('✓ Reusing existing pull request:')}$urlHint');
     } else {
       final result = await _processWrapper.run(
         'gh',
@@ -174,7 +176,7 @@ class MergeGit extends DirCommand<bool> {
       // directly and a manual merge is one click away.
       final url = result.stdout.toString().trim();
       if (url.isNotEmpty) {
-        ggLog('${darkGray('Created pull request:')} ${blue(url)}');
+        ggLog('${cDetail('Created pull request:')} ${blue(url)}');
       }
     }
 
@@ -251,7 +253,7 @@ class MergeGit extends DirCommand<bool> {
     var prId = await _existingAzurePrId(directory, branch);
 
     if (prId != null) {
-      ggLog(darkGray('Reusing existing pull request !$prId for $branch.'));
+      ggLog(cDetail('✓ Reusing existing pull request !$prId for $branch.'));
     } else {
       // Create the PR plain and set auto-complete separately: completion
       // options on `az repos pr create` fail as a whole when the policy
@@ -274,7 +276,7 @@ class MergeGit extends DirCommand<bool> {
       }
       prId = _prIdFromCreateOutput(result.stdout.toString());
       if (prId != null) {
-        ggLog(darkGray('Created pull request !$prId for $branch.'));
+        ggLog(cDetail('✓ Created pull request !$prId for $branch.'));
       }
     }
 

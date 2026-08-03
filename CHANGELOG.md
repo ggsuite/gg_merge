@@ -5,6 +5,7 @@
 ### Changed
 
 - refactor: shorten all CLI help texts to 60 chars
+- Improve coloring
 
 ## 2.0.0 - 2026-07-31
 

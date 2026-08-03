@@ -32,5 +32,5 @@ void main() {
   if (result.stderr.toString().trim().isNotEmpty) {
     print(red('❌ ${result.stderr}'));
   }
-  print(green('✅ Installed $exe in $dest'));
+  print(green('✓ Installed $exe in $dest'));
 }

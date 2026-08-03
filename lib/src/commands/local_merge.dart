@@ -7,6 +7,7 @@
 import 'dart:io';
 
 import 'package:gg_args/gg_args.dart';
+import 'package:gg_console_colors/gg_console_colors.dart';
 import 'package:gg_log/gg_log.dart';
 import 'package:gg_process/gg_process.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
@@ -105,7 +106,7 @@ class LocalMerge extends DirCommand<bool> {
       throw Exception('Commit failed: ${commitResult.stderr}');
     }
 
-    ggLog('✅ Local merge successful.');
+    ggLog(cDetail('✓ Local merge successful.'));
     return true;
   }
 
