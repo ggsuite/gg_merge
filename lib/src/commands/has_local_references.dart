@@ -23,9 +23,7 @@ class HasLocalReferences extends DirCommand<bool> {
   HasLocalReferences({
     required super.ggLog,
     super.name = 'has-local-references',
-    super.description =
-        'Checks whether the package manifest contains local path '
-        'references for dependencies.',
+    super.description = 'Check the manifest for local path references',
   });
 
   @override

@@ -31,8 +31,7 @@ class WaitForMerge extends DirCommand<bool> {
     Duration pollInterval = const Duration(seconds: 15),
     Future<void> Function(Duration)? delay,
     super.name = 'wait-for-merge',
-    super.description =
-        'Waits until the pull request of the current branch is merged.',
+    super.description = 'Wait until the pull request is merged',
   }) : _processWrapper = processWrapper,
        _pollInterval = pollInterval,
        _delay = delay ?? Future<void>.delayed;

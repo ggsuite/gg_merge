@@ -23,9 +23,7 @@ class HasGitReferences extends DirCommand<bool> {
   HasGitReferences({
     required super.ggLog,
     super.name = 'has-git-references',
-    super.description =
-        'Checks whether the package manifest contains git references '
-        'for dependencies.',
+    super.description = 'Check the manifest for git references',
   });
 
   @override

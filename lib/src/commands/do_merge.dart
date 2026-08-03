@@ -11,6 +11,10 @@ import 'package:gg_log/gg_log.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
 
 /// Orchestrates check/merge.
+/// Checks the pre-conditions and then merges the feature branch through a
+/// pull request (optionally with automerge), or locally with `--local`.
+/// `--message` is used for a local squash merge and as title + squash
+/// message of a remote pull request.
 class DoMerge extends DirCommand<bool> {
   /// Create a [DoMerge] command
   DoMerge({
@@ -19,9 +23,7 @@ class DoMerge extends DirCommand<bool> {
     MergeGit? mergeGit,
     LocalMerge? localMerge,
     super.name = 'do-merge',
-    super.description =
-        'Checks pre-conditions and performs merge request/PR '
-        '(optionally with automerge) or local merge with --local.',
+    super.description = 'Merge the feature branch via pull request or local',
     // coverage:ignore-start
   }) : _canMerge = canMerge ?? CanMerge(ggLog: ggLog),
        _mergeGit = mergeGit ?? MergeGit(ggLog: ggLog),
@@ -135,13 +137,7 @@ class DoMerge extends DirCommand<bool> {
       negatable: true,
       defaultsTo: true,
     );
-    argParser.addOption(
-      'message',
-      abbr: 'm',
-      help:
-          'The merge commit message: used for local squash merges and as '
-          'title + squash message of remote pull requests.',
-    );
+    argParser.addOption('message', abbr: 'm', help: 'The merge commit message');
     argParser.addFlag(
       'verbose',
       abbr: 'v',
