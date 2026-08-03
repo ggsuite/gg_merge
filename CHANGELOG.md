@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- refactor: shorten all CLI help texts to 60 chars
+
 ## 2.0.0 - 2026-07-31
 
 ### Changed
