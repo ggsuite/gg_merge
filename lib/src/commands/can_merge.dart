@@ -5,12 +5,15 @@
 // found in the LICENSE file in the root of this package.
 
 import 'dart:io';
+
 import 'package:gg_args/gg_args.dart';
+import 'package:gg_console_colors/gg_console_colors.dart';
 import 'package:gg_log/gg_log.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
+
 import 'has_local_references.dart';
-import 'is_behind_main.dart';
 import 'is_ahead_main.dart';
+import 'is_behind_main.dart';
 import 'update_project_git.dart';
 
 /// Determines if merging is allowed according to project rules.
@@ -73,7 +76,7 @@ class CanMerge extends DirCommand<bool> {
         'Branch is not ahead of main; there is nothing to merge.',
       );
     }
-    ggLog('✅ All merge conditions fulfilled.');
+    ggLog(cDetail('✓ All merge conditions fulfilled.'));
     return true;
   }
 }

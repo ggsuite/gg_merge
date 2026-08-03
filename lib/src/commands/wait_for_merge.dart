@@ -6,11 +6,13 @@
 
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:gg_args/gg_args.dart';
 import 'package:gg_console_colors/gg_console_colors.dart';
 import 'package:gg_log/gg_log.dart';
 import 'package:gg_process/gg_process.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
+
 import '../util/command_helpers.dart';
 
 /// Polls the pull request of the current branch until it has been merged.
@@ -107,9 +109,9 @@ class WaitForMerge extends DirCommand<bool> {
   /// buries the rest of the publish output.
   void _askToMerge(GgLog ggLog, String branch, String? url) {
     final target = url != null && url.isNotEmpty
-        ? blue(url)
+        ? cCmd(url)
         : 'the pull request of $branch';
-    ggLog('${yellow('Please open and merge ')}$target');
+    ggLog('${cAction('Please open and merge ')}$target');
   }
 
   // ...........................................................................
@@ -123,14 +125,14 @@ class WaitForMerge extends DirCommand<bool> {
       final pr = await _azurePr(directory, branch);
       final status = pr.status;
       if (status == 'completed') {
-        ggLog('✅ Pull request for $branch merged.');
+        ggLog(cDetail('✓ Pull request for $branch merged.'));
         return true;
       }
       if (status == 'abandoned') {
-        throw Exception('Pull request for $branch was abandoned.');
+        throw Exception(cError('Pull request for $branch was abandoned.'));
       }
       if (status == null) {
-        throw Exception('No pull request found for branch $branch.');
+        throw Exception(cError('No pull request found for branch $branch.'));
       }
       if (!asked) {
         asked = true;
@@ -205,7 +207,7 @@ class WaitForMerge extends DirCommand<bool> {
       final pr = await _gitHubPr(directory, branch);
       final state = pr.state;
       if (state == 'MERGED') {
-        ggLog('✅ Pull request for $branch merged.');
+        ggLog(cDetail('✓ Pull request for $branch merged.'));
         return true;
       }
       if (state == 'CLOSED') {
