@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.2 - 2026-08-03
+
+### Changed
+
+- Prevent pubspec.lock interrupting publishing
+
+### Fixed
+
+- Fix issues with pubspec.lock
+
 ## 2.0.1 - 2026-08-03
 
 ### Changed
