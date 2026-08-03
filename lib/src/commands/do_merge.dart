@@ -58,6 +58,7 @@ class DoMerge extends DirCommand<bool> {
     return await GgStatusPrinter<bool>(
       message: 'Performing final merge.',
       ggLog: ggLog,
+      dark: true,
     ).logTask(
       task: () => get(
         directory: directory,

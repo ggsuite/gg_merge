@@ -36,6 +36,7 @@ class LocalMerge extends DirCommand<bool> {
     return await GgStatusPrinter<bool>(
       message: 'Performing local merge into main.',
       ggLog: ggLog,
+      dark: true,
     ).logTask(
       task: () => get(directory: directory, ggLog: ggLog),
       success: (v) => v,
