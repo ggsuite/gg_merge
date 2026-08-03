@@ -5,10 +5,11 @@
 // found in the LICENSE file in the root of this package.
 
 import 'dart:io';
+
 import 'package:gg_args/gg_args.dart';
 import 'package:gg_log/gg_log.dart';
-import 'package:gg_status_printer/gg_status_printer.dart';
 import 'package:gg_process/gg_process.dart';
+import 'package:gg_status_printer/gg_status_printer.dart';
 
 /// Updates current Git project by fetch/pull all branches.
 class UpdateProjectGit extends DirCommand<bool> {
@@ -30,6 +31,7 @@ class UpdateProjectGit extends DirCommand<bool> {
     return await GgStatusPrinter<bool>(
       message: 'Updating Git branches.',
       ggLog: ggLog,
+      dark: true,
     ).logTask(
       task: () => get(directory: directory, ggLog: ggLog),
       success: (b) => b,

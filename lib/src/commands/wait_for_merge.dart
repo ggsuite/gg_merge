@@ -50,6 +50,7 @@ class WaitForMerge extends DirCommand<bool> {
     return await GgStatusPrinter<bool>(
       message: 'Waiting for pull request to be merged.',
       ggLog: ggLog,
+      dark: true,
     ).logTask(
       task: () => get(directory: directory, ggLog: ggLog),
       success: (v) => v,

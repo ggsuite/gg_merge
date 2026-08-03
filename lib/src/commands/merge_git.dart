@@ -50,6 +50,7 @@ class MergeGit extends DirCommand<bool> {
     return await GgStatusPrinter<bool>(
       message: 'Create merge request.',
       ggLog: ggLog,
+      dark: true,
     ).logTask(
       task: () => get(
         directory: directory,
