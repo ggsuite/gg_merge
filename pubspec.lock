@@ -148,10 +148,11 @@ packages:
   gg_git:
     dependency: "direct main"
     description:
-      path: "../gg_git"
-      relative: true
-    source: path
-    version: "3.2.1"
+      name: gg_git
+      sha256: "24186fc47fb915f8528bac4c2e7770fcba42f0ff1e76365ce987e607c8aaf173"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.2.2"
   gg_hash:
     dependency: transitive
     description:
