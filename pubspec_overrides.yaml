@@ -16,3 +16,15 @@ dependency_overrides:
     path: ../gg_is_flutter
   gg_project_root:
     path: ../gg_project_root
+  gg_capture_print:
+    path: ../gg_capture_print
+  gg_console_colors:
+    path: ../gg_console_colors
+  gg_hash:
+    path: ../gg_hash
+  gg_is_github:
+    path: ../gg_is_github
+  gg_process:
+    path: ../gg_process
+  gg_lang:
+    path: ../gg_lang
