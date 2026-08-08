@@ -11,7 +11,7 @@ dependencies:
   gg_args: ^2.2.0
   gg_console_colors: ^2.3.0
   gg_git: ^3.2.2
-  gg_is_flutter: ^1.0.7
+  gg_is_flutter: ^1.0.8
   gg_lang: ^0.4.0
   gg_log: ^1.0.6
   gg_process: ^1.1.6
