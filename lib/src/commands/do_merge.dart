@@ -54,6 +54,7 @@ class DoMerge extends DirCommand<bool> {
     String? message,
     bool? verbose,
     bool? deleteSourceBranch,
+    Map<String, dynamic> options = const {},
   }) async {
     return await GgStatusPrinter<bool>(
       message: 'Performing final merge.',
