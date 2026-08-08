@@ -46,6 +46,7 @@ class MergeGit extends DirCommand<bool> {
     bool? automerge,
     bool? deleteSourceBranch,
     String? message,
+    Map<String, dynamic> options = const {},
   }) async {
     return await GgStatusPrinter<bool>(
       message: 'Create merge request.',
