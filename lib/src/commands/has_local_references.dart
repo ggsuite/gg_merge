@@ -8,17 +8,21 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:gg_args/gg_args.dart';
-import 'package:gg_lang/gg_lang.dart';
 import 'package:gg_log/gg_log.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
 import 'package:yaml/yaml.dart';
 
-/// Checks whether the project has local (path) references in its manifest.
+/// Checks whether the project has local (path) references in its manifests.
 ///
 /// For Dart/Flutter (`pubspec.yaml`) this checks for `path:` keys in
 /// dependency maps. For TypeScript (`package.json`) it checks for npm-style
 /// local protocols (`file:`, `link:`, `workspace:`) and bare relative paths
 /// in the various dependency sections.
+///
+/// A *hybrid* carries both manifests and is checked on **both** sides. It used
+/// to be checked as Dart only — `detectProjectType` gives `pubspec.yaml`
+/// precedence — so a `link:` in its `package.json` passed `can merge` and would
+/// have been published, unresolvable for everybody else.
 class HasLocalReferences extends DirCommand<bool> {
   /// Creates a [HasLocalReferences] command
   HasLocalReferences({
@@ -43,19 +47,21 @@ class HasLocalReferences extends DirCommand<bool> {
     );
   }
 
-  /// Returns true if the manifest contains at least one local path reference.
+  /// Returns true if a manifest contains at least one local path reference.
   @override
   Future<bool> get({required Directory directory, required GgLog ggLog}) async {
-    switch (detectProjectType(directory)) {
-      case ProjectType.dart:
-      case ProjectType.flutter:
-        return _checkPubspec(directory);
-      case ProjectType.typescript:
-        return _checkPackageJson(directory);
-      case ProjectType.none:
-        // Without a manifest there are no dependency references at all.
-        return false;
+    // Every manifest the directory carries is checked, so a hybrid cannot hide
+    // a localized npm dependency behind its pubspec. A directory without any
+    // manifest has no dependency references at all.
+    if (File('${directory.path}/pubspec.yaml').existsSync() &&
+        await _checkPubspec(directory)) {
+      return true;
     }
+    if (File('${directory.path}/package.json').existsSync() &&
+        await _checkPackageJson(directory)) {
+      return true;
+    }
+    return false;
   }
 
   // ...........................................................................
