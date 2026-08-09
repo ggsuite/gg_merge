@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.2.0 - 2026-08-09
+
+### Changed
+
+- Improve commit behavior
+
 ## 3.1.0 - 2026-08-09
 
 ### Changed

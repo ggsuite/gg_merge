@@ -86,7 +86,7 @@ void main() {
       mockCurrentBranch('feature-branch');
       mockCheckoutMain();
       mockSquash('feature-branch');
-      mockCommit('#gg: Merged feature-branch into main');
+      mockCommit('Merged feature-branch into main');
 
       final result = await localMerge.exec(directory: d, ggLog: ggLog);
       expect(result, isTrue);
@@ -118,7 +118,7 @@ void main() {
       mockCurrentBranch('feature-branch');
       mockCheckoutMain();
       mockSquash('feature-branch');
-      mockCommit('#gg: Merged feature-branch into main');
+      mockCommit('Merged feature-branch into main');
 
       final result = await localMerge.exec(directory: d, ggLog: ggLog);
       expect(result, isTrue);
@@ -175,7 +175,7 @@ void main() {
       mockCheckoutMain();
       mockSquash('feature');
       mockCommit(
-        '#gg: Merged feature into main',
+        'Merged feature into main',
         exitCode: 1,
         stderr: 'commit error',
       );
@@ -239,7 +239,7 @@ void main() {
         mockCurrentBranch('feature-branch');
         mockCheckoutMain();
         mockSquash('feature-branch');
-        mockCommit('#gg: Merged feature-branch into main');
+        mockCommit('Merged feature-branch into main');
 
         final runner = CommandRunner<dynamic>('test', 'test')
           ..addCommand(localMerge);
@@ -251,7 +251,7 @@ void main() {
             '\$ git rev-parse --abbrev-ref HEAD',
             '\$ git checkout main',
             '\$ git merge feature-branch --squash',
-            '\$ git commit -m #gg: Merged feature-branch into main',
+            '\$ git commit -m Merged feature-branch into main',
           ]),
         );
       });
@@ -260,7 +260,7 @@ void main() {
         mockCurrentBranch('feature-branch');
         mockCheckoutMain();
         mockSquash('feature-branch');
-        mockCommit('#gg: Merged feature-branch into main');
+        mockCommit('Merged feature-branch into main');
 
         final result = await localMerge.exec(directory: d, ggLog: ggLog);
         expect(result, isTrue);
