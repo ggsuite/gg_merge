@@ -32,6 +32,7 @@ class LocalMerge extends DirCommand<bool> {
   Future<bool> exec({
     required Directory directory,
     required GgLog ggLog,
+    Map<String, dynamic> options = const {},
   }) async {
     return await GgStatusPrinter<bool>(
       message: 'Performing local merge into main.',
@@ -94,8 +95,10 @@ class LocalMerge extends DirCommand<bool> {
       throw Exception('Merge failed: ${mergeResult.stderr}');
     }
 
-    // Commit with provided message or default
-    final commitMessage = message ?? '#gg: Merged $currentBranch into main';
+    // No gg prefix, even in the fallback: this commit lands on the default
+    // branch, and a »#gg: « subject there would claim it is gg bookkeeping —
+    // the default branch carries releases and tags only.
+    final commitMessage = message ?? 'Merged $currentBranch into main';
     final commitResult = await _run(
       'git',
       ['commit', '-m', commitMessage],

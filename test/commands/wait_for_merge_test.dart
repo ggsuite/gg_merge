@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:gg_merge/src/commands/wait_for_merge.dart';
+import 'package:gg_status_printer/gg_status_printer.dart';
 import '../helpers.dart';
 
 void main() {
@@ -328,6 +329,35 @@ void main() {
             .toList();
         expect(urlLines, hasLength(1));
         expect(urlLines.first, contains('Please open and merge'));
+      });
+
+      test('an auto-merge PR is only named, never asked for', () async {
+        stubOriginUrl('https://github.com/me/repo.git');
+        stubCurrentBranch('feature');
+        const pr = '"url":"https://github.com/me/repo/pull/9"';
+        stubSequence('gh', 'list', [
+          ProcessResult(0, 0, '[{"state":"OPEN", $pr}]', ''),
+          ProcessResult(0, 0, '[{"state":"MERGED", $pr}]', ''),
+        ]);
+        final result = await waitForMerge.get(
+          directory: d,
+          ggLog: ggLog,
+          autoMerge: true,
+        );
+        expect(result, isTrue);
+
+        final urlLines = messages
+            .where((m) => m.contains('https://github.com/me/repo/pull/9'))
+            .toList();
+        expect(urlLines, hasLength(1));
+        expect(
+          rmControls(urlLines.first),
+          'Pull request: https://github.com/me/repo/pull/9',
+        );
+        expect(
+          messages.any((m) => m.contains('Please open and merge')),
+          isFalse,
+        );
       });
 
       test('throws when the PR was closed without merging', () async {

@@ -46,6 +46,7 @@ class WaitForMerge extends DirCommand<bool> {
   Future<bool> exec({
     required Directory directory,
     required GgLog ggLog,
+    Map<String, dynamic> options = const {},
   }) async {
     return await GgStatusPrinter<bool>(
       message: 'Waiting for pull request to be merged.',
@@ -64,11 +65,16 @@ class WaitForMerge extends DirCommand<bool> {
   /// the time the wait starts (e.g. a merge that deleted the feature branch
   /// checked out main), and searching for a pull request of the default
   /// branch would fail with a misleading "no pull request found".
+  ///
+  /// [autoMerge] says the pull request completes itself once its policies
+  /// pass. The wait then only *names* it — asking the user to merge a pull
+  /// request that merges on its own sends them to do work that is not theirs.
   @override
   Future<bool> get({
     required Directory directory,
     required GgLog ggLog,
     String? branch,
+    bool autoMerge = false,
   }) async {
     final remoteUrl = await readOriginUrl(
       directory: directory,
@@ -81,9 +87,9 @@ class WaitForMerge extends DirCommand<bool> {
     branch ??= await _currentBranch(directory);
     switch (provider) {
       case GitProvider.github:
-        return _waitGitHub(directory, branch, ggLog);
+        return _waitGitHub(directory, branch, ggLog, autoMerge);
       case GitProvider.azure:
-        return _waitAzure(directory, branch, ggLog);
+        return _waitAzure(directory, branch, ggLog, autoMerge);
       case null:
         throw UnimplementedError('Unsupported git provider url: $remoteUrl');
     }
@@ -102,17 +108,24 @@ class WaitForMerge extends DirCommand<bool> {
     return result.stdout.toString().trim();
   }
 
-  /// Asks the user to merge the pull request of [branch] and points to its
-  /// web page, so the merge can be done right away in the browser.
+  /// Names the pull request of [branch] and points to its web page.
+  ///
+  /// Without [autoMerge] the merge is the user's job, so this asks for it.
+  /// An auto-merge pull request completes on its own — then the url is
+  /// reported and nothing is asked, because there is nothing to do.
   ///
   /// Called once per wait, not on every poll: gg has no way to speed the
-  /// merge up, so repeating the same request every [pollInterval] only
-  /// buries the rest of the publish output.
-  void _askToMerge(GgLog ggLog, String branch, String? url) {
+  /// merge up, so repeating the same line every [pollInterval] only buries
+  /// the rest of the publish output.
+  void _askToMerge(GgLog ggLog, String branch, String? url, bool autoMerge) {
     final target = url != null && url.isNotEmpty
         ? cCmd(url)
-        : 'the pull request of $branch';
-    ggLog('${cAction('Please open and merge ')}$target');
+        : cCmd('the pull request of $branch');
+    ggLog(
+      autoMerge
+          ? '${cDetail('Pull request:')} $target'
+          : '${cAction('Please open and merge ')}$target',
+    );
   }
 
   // ...........................................................................
@@ -120,6 +133,7 @@ class WaitForMerge extends DirCommand<bool> {
     Directory directory,
     String branch,
     GgLog ggLog,
+    bool autoMerge,
   ) async {
     var asked = false;
     while (true) {
@@ -137,7 +151,7 @@ class WaitForMerge extends DirCommand<bool> {
       }
       if (!asked) {
         asked = true;
-        _askToMerge(ggLog, branch, pr.url);
+        _askToMerge(ggLog, branch, pr.url, autoMerge);
       }
       await _delay(_pollInterval);
     }
@@ -202,6 +216,7 @@ class WaitForMerge extends DirCommand<bool> {
     Directory directory,
     String branch,
     GgLog ggLog,
+    bool autoMerge,
   ) async {
     var asked = false;
     while (true) {
@@ -219,7 +234,7 @@ class WaitForMerge extends DirCommand<bool> {
       }
       if (!asked) {
         asked = true;
-        _askToMerge(ggLog, branch, pr.url);
+        _askToMerge(ggLog, branch, pr.url, autoMerge);
       }
       await _delay(_pollInterval);
     }

@@ -1,5 +1,37 @@
 # Changelog
 
+## 3.2.1 - 2026-08-10
+
+### Fixed
+
+- Fix org-url repo add, code-workspace upkeep on rm and the auto-merge PR hint
+
+## 3.2.0 - 2026-08-09
+
+### Changed
+
+- Improve commit behavior
+
+## 3.1.0 - 2026-08-09
+
+### Changed
+
+- Allow to publish hybrid packages
+
+### Fixed
+
+- `HasLocalReferences` — and with it `can merge` — inspects **every** manifest a
+repository carries instead of only the one `detectProjectType` picks. That one
+is `pubspec.yaml` whenever it exists, so a *hybrid* could carry a `link:` to a
+sibling checkout in its `package.json`, pass `can merge`, and publish a
+`package.json` nobody else can resolve.
+
+## 3.0.0 - 2026-08-08
+
+### Changed
+
+- Allow to pass custom options to exec of dir commands.
+
 ## 2.1.1 - 2026-08-04
 
 ### Changed

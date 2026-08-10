@@ -138,5 +138,56 @@ dev_dependencies:
       final result = await hasLocalReferences.exec(directory: d, ggLog: ggLog);
       expect(result, isTrue);
     });
+
+    // -----------------------------------------------------------------------
+    // Hybrid: pubspec.yaml + package.json
+    // -----------------------------------------------------------------------
+
+    /// A hybrid carries both manifests. detectProjectType gives pubspec.yaml
+    /// precedence, so the npm side used to be invisible here.
+    Future<void> writeHybrid({
+      required String pubspec,
+      required String packageJson,
+    }) async {
+      await File('${d.path}/pubspec.yaml').writeAsString(pubspec);
+      await File('${d.path}/package.json').writeAsString(packageJson);
+    }
+
+    test('hybrid: returns false when neither side is localized', () async {
+      await writeHybrid(
+        pubspec: 'name: demo\ndependencies:\n  foo: ^1.0.0\n',
+        packageJson:
+            '{"name": "@me/demo", '
+            '"dependencies": {"lodash": "^4.17.0"}}',
+      );
+      expect(
+        await hasLocalReferences.exec(directory: d, ggLog: ggLog),
+        isFalse,
+      );
+    });
+
+    test('hybrid: detects a link: in package.json', () async {
+      // The blind spot: a clean pubspec used to hide a localized npm
+      // dependency, which would then have been published unresolvable.
+      await writeHybrid(
+        pubspec: 'name: demo\ndependencies:\n  foo: ^1.0.0\n',
+        packageJson:
+            '{"name": "@me/demo", '
+            '"dependencies": {"@me/sibling": "link:../sibling"}}',
+      );
+      expect(await hasLocalReferences.exec(directory: d, ggLog: ggLog), isTrue);
+    });
+
+    test('hybrid: detects a path: in pubspec.yaml', () async {
+      await writeHybrid(
+        pubspec:
+            'name: demo\ndependencies:\n'
+            '  foo:\n    path: ../foo\n',
+        packageJson:
+            '{"name": "@me/demo", '
+            '"dependencies": {"lodash": "^4.17.0"}}',
+      );
+      expect(await hasLocalReferences.exec(directory: d, ggLog: ggLog), isTrue);
+    });
   });
 }
