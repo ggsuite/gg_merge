@@ -9,4 +9,4 @@
 // coverage:ignore-file
 
 /// The version of the `gg_merge` package.
-const String ggMergeVersion = '3.2.1';
+const String ggMergeVersion = '3.3.0';

@@ -39,6 +39,9 @@ class MergeGit extends DirCommand<bool> {
   /// The --message option
   String? get _messageOption => argResults?['message'] as String?;
 
+  /// The --body option
+  String? get _bodyOption => argResults?['body'] as String?;
+
   @override
   Future<bool> exec({
     required Directory directory,
@@ -46,6 +49,7 @@ class MergeGit extends DirCommand<bool> {
     bool? automerge,
     bool? deleteSourceBranch,
     String? message,
+    String? body,
     Map<String, dynamic> options = const {},
   }) async {
     return await GgStatusPrinter<bool>(
@@ -59,6 +63,7 @@ class MergeGit extends DirCommand<bool> {
         automerge: automerge,
         deleteSourceBranch: deleteSourceBranch,
         message: message,
+        body: body,
       ),
       success: (b) => b,
     );
@@ -77,6 +82,11 @@ class MergeGit extends DirCommand<bool> {
   /// [message] becomes the pull-request title and the squash merge commit
   /// message. The merge always uses the squash strategy.
   ///
+  /// [body] becomes the pull-request description. When it is null the title
+  /// is used for the description as well — the historic behavior, kept so a
+  /// caller that has nothing more to say does not end up with an empty
+  /// description.
+  ///
   /// Enabling automerge is best-effort: when the provider rejects it (e.g.
   /// GitHub's "Allow auto-merge" is off, or an Azure policy forbids the
   /// squash strategy) the PR stays open and a warning is logged instead of
@@ -88,10 +98,12 @@ class MergeGit extends DirCommand<bool> {
     bool? automerge,
     bool? deleteSourceBranch,
     String? message,
+    String? body,
   }) async {
     automerge ??= _automergeOption;
     deleteSourceBranch ??= _deleteSourceBranchOption;
     message ??= _messageOption;
+    body ??= _bodyOption;
     final remoteUrl = await readOriginUrl(
       directory: directory,
       processWrapper: _processWrapper,
@@ -108,6 +120,7 @@ class MergeGit extends DirCommand<bool> {
           automerge: automerge,
           deleteSourceBranch: deleteSourceBranch,
           message: message,
+          body: body,
         );
         break;
       case GitProvider.azure:
@@ -117,6 +130,7 @@ class MergeGit extends DirCommand<bool> {
           automerge: automerge,
           deleteSourceBranch: deleteSourceBranch,
           message: message,
+          body: body,
         );
         break;
       case null:
@@ -144,6 +158,7 @@ class MergeGit extends DirCommand<bool> {
     required bool automerge,
     required bool deleteSourceBranch,
     required String? message,
+    required String? body,
   }) async {
     // Reuse an existing OPEN PR for the current branch to stay idempotent.
     // Merged/closed PRs of the same branch (an earlier release of a reused
@@ -162,9 +177,15 @@ class MergeGit extends DirCommand<bool> {
         [
           'pr',
           'create',
-          // The merge message becomes title and body; without one gh derives
+          // The merge message becomes the title; the body defaults to it when
+          // the caller has nothing more to say. Without a message gh derives
           // both from the commits (--fill).
-          if (message != null) ...['--title', message, '--body', message],
+          if (message != null) ...[
+            '--title',
+            message,
+            '--body',
+            body ?? message,
+          ],
           if (message == null) '--fill',
           '--web=false',
         ],
@@ -249,6 +270,7 @@ class MergeGit extends DirCommand<bool> {
     required bool automerge,
     required bool deleteSourceBranch,
     required String? message,
+    required String? body,
   }) async {
     // The az cli must be installed.
     final branch = await _currentBranch(directory);
@@ -269,6 +291,7 @@ class MergeGit extends DirCommand<bool> {
           '--source-branch',
           'refs/heads/$branch',
           if (message != null) ...['--title', message],
+          if (body != null) ...['--description', body],
         ],
         runInShell: true,
         workingDirectory: directory.path,
@@ -397,6 +420,11 @@ class MergeGit extends DirCommand<bool> {
       'message',
       abbr: 'm',
       help: 'The pull-request title and squash merge commit message.',
+    );
+    argParser.addOption(
+      'body',
+      abbr: 'b',
+      help: 'The pull-request description. Defaults to the message.',
     );
   }
 }
