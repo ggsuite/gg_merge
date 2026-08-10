@@ -278,6 +278,56 @@ void main() {
         ).called(1);
       });
 
+      test('uses the body as PR description when one is given', () async {
+        stubOriginUrl('https://github.com/me/repo.git');
+        stubCurrentBranch('feature');
+        stubGh([
+          'pr',
+          'list',
+          '--head',
+          'feature',
+          '--state',
+          'open',
+          '--json',
+          'url',
+          '--limit',
+          '1',
+        ], ProcessResult(0, 0, '[]', ''));
+        stubGh([
+          'pr',
+          'create',
+          '--title',
+          'Release 1.2.3',
+          '--body',
+          '- Add tracking\n- Fix typo',
+          '--web=false',
+        ], ProcessResult(0, 0, 'https://github.com/me/repo/pull/8', ''));
+
+        final result = await mergeGit.get(
+          directory: d,
+          ggLog: ggLog,
+          message: 'Release 1.2.3',
+          body: '- Add tracking\n- Fix typo',
+        );
+        expect(result, isTrue);
+        verify(
+          () => processWrapper.run(
+            'gh',
+            [
+              'pr',
+              'create',
+              '--title',
+              'Release 1.2.3',
+              '--body',
+              '- Add tracking\n- Fix typo',
+              '--web=false',
+            ],
+            runInShell: true,
+            workingDirectory: d.path,
+          ),
+        ).called(1);
+      });
+
       test('reuses an existing PR instead of creating a duplicate', () async {
         stubOriginUrl('https://github.com/me/repo.git');
         stubCurrentBranch('feature');
@@ -679,6 +729,49 @@ void main() {
           () => processWrapper.run(
             'az',
             azUpdateArgs(id: '11', message: 'Release 1.2.3'),
+            runInShell: true,
+            workingDirectory: d.path,
+          ),
+        ).called(1);
+      });
+
+      test('passes the body as PR description', () async {
+        stubOriginUrl('https://dev.azure.com/you/project');
+        stubCurrentBranch('feature');
+        stubAz('list', ProcessResult(0, 0, '[]', ''));
+        stubAzExact([
+          'repos',
+          'pr',
+          'create',
+          '--source-branch',
+          'refs/heads/feature',
+          '--title',
+          'Release 1.2.3',
+          '--description',
+          '- Add tracking',
+        ], ProcessResult(0, 0, '{"pullRequestId":11}', ''));
+
+        final result = await mergeGit.get(
+          directory: d,
+          ggLog: ggLog,
+          message: 'Release 1.2.3',
+          body: '- Add tracking',
+        );
+        expect(result, isTrue);
+        verify(
+          () => processWrapper.run(
+            'az',
+            [
+              'repos',
+              'pr',
+              'create',
+              '--source-branch',
+              'refs/heads/feature',
+              '--title',
+              'Release 1.2.3',
+              '--description',
+              '- Add tracking',
+            ],
             runInShell: true,
             workingDirectory: d.path,
           ),
