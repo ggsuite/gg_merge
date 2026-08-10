@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.3.0 - 2026-08-10
+
+### Added
+
+- `--body` on `merge-git` / `do-merge`: the pull-request description, separate from the title
+
 ## 3.2.1 - 2026-08-10
 
 ### Fixed

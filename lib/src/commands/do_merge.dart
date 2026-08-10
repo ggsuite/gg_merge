@@ -16,7 +16,8 @@ import 'package:gg_status_printer/gg_status_printer.dart';
 /// Checks the pre-conditions and then merges the feature branch through a
 /// pull request (optionally with automerge), or locally with `--local`.
 /// `--message` is used for a local squash merge and as title + squash
-/// message of a remote pull request.
+/// message of a remote pull request. `--body` sets the pull-request
+/// description; without it the description repeats the message.
 class DoMerge extends DirCommand<bool> {
   /// Create a [DoMerge] command
   DoMerge({
@@ -39,6 +40,7 @@ class DoMerge extends DirCommand<bool> {
   final LocalMerge _localMerge;
 
   String? get _messageOption => argResults?['message'] as String?;
+  String? get _bodyOption => argResults?['body'] as String?;
   bool get _automergeOption => argResults?['automerge'] as bool? ?? false;
   bool get _localOption => argResults?['local'] as bool? ?? false;
   bool get _verboseOption => argResults?['verbose'] as bool? ?? false;
@@ -52,6 +54,7 @@ class DoMerge extends DirCommand<bool> {
     bool? automerge,
     bool? local,
     String? message,
+    String? body,
     bool? verbose,
     bool? deleteSourceBranch,
     Map<String, dynamic> options = const {},
@@ -67,6 +70,7 @@ class DoMerge extends DirCommand<bool> {
         automerge: automerge,
         local: local,
         message: message,
+        body: body,
         verbose: verbose,
         deleteSourceBranch: deleteSourceBranch,
       ),
@@ -82,12 +86,14 @@ class DoMerge extends DirCommand<bool> {
     bool? automerge,
     bool? local,
     String? message,
+    String? body,
     bool? verbose,
     bool? deleteSourceBranch,
   }) async {
     automerge ??= _automergeOption;
     local ??= _localOption;
     message ??= _messageOption;
+    body ??= _bodyOption;
     verbose ??= _verboseOption;
     deleteSourceBranch ??= _deleteSourceBranchOption;
 
@@ -115,6 +121,7 @@ class DoMerge extends DirCommand<bool> {
         automerge: automerge,
         deleteSourceBranch: deleteSourceBranch,
         message: message,
+        body: body,
       );
     }
     return true;
@@ -142,6 +149,11 @@ class DoMerge extends DirCommand<bool> {
       defaultsTo: true,
     );
     argParser.addOption('message', abbr: 'm', help: 'The merge commit message');
+    argParser.addOption(
+      'body',
+      abbr: 'b',
+      help: 'The pull-request description. Defaults to the message.',
+    );
     argParser.addFlag(
       'verbose',
       abbr: 'v',
