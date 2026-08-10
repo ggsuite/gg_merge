@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.2.1 - 2026-08-10
+
+### Fixed
+
+- Fix org-url repo add, code-workspace upkeep on rm and the auto-merge PR hint
+
 ## 3.2.0 - 2026-08-09
 
 ### Changed
