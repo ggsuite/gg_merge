@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Various fixes
+
 ## 3.2.1 - 2026-08-10
 
 ### Fixed
