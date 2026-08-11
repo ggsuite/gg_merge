@@ -5,6 +5,7 @@
 ### Changed
 
 - Provide gg via npm
+- Fix shell changes
 
 ## 3.3.0 - 2026-08-10
 
