@@ -18,10 +18,10 @@ class IsAheadMain extends DirCommand<bool> {
   /// Creates a [IsAheadMain] command
   IsAheadMain({
     required super.ggLog,
-    GgProcessWrapper processWrapper = const GgProcessWrapper(),
+    this._processWrapper = const GgProcessWrapper(),
     super.name = 'is-ahead-main',
     super.description = 'Checks if the current branch is ahead of main.',
-  }) : _processWrapper = processWrapper;
+  });
 
   final GgProcessWrapper _processWrapper;
 

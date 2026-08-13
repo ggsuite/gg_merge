@@ -16,10 +16,10 @@ class UpdateProjectGit extends DirCommand<bool> {
   /// Creates a [UpdateProjectGit] command
   UpdateProjectGit({
     required super.ggLog,
-    GgProcessWrapper processWrapper = const GgProcessWrapper(),
+    this._processWrapper = const GgProcessWrapper(),
     super.name = 'update-project-git',
     super.description = 'Fetches and pulls remote state for all branches.',
-  }) : _processWrapper = processWrapper;
+  });
 
   final GgProcessWrapper _processWrapper;
 

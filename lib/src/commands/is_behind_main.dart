@@ -18,10 +18,10 @@ class IsBehindMain extends DirCommand<bool> {
   /// Creates a [IsBehindMain] command
   IsBehindMain({
     required super.ggLog,
-    GgProcessWrapper processWrapper = const GgProcessWrapper(),
+    this._processWrapper = const GgProcessWrapper(),
     super.name = 'is-behind-main',
     super.description = 'Checks if the current branch is behind main.',
-  }) : _processWrapper = processWrapper;
+  });
 
   final GgProcessWrapper _processWrapper;
 

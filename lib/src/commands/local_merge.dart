@@ -17,12 +17,12 @@ class LocalMerge extends DirCommand<bool> {
   /// Creates a [LocalMerge] command
   LocalMerge({
     required super.ggLog,
-    GgProcessWrapper processWrapper = const GgProcessWrapper(),
+    this._processWrapper = const GgProcessWrapper(),
     super.name = 'local-merge',
     super.description =
         'Performs a local merge into '
         'main without remote providers.',
-  }) : _processWrapper = processWrapper {
+  }) {
     _addArgs();
   }
 

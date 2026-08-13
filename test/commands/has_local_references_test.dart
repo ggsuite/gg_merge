@@ -5,8 +5,10 @@
 // found in the LICENSE file in the root of this package.
 
 import 'dart:io';
+
 import 'package:test/test.dart';
 import 'package:gg_merge/src/commands/has_local_references.dart';
+
 import '../helpers.dart';
 
 void main() {

@@ -4,10 +4,12 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 import 'dart:io';
+
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:gg_merge/src/commands/wait_for_merge.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
+
 import '../helpers.dart';
 
 void main() {

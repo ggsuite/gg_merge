@@ -20,10 +20,10 @@ class MergeGit extends DirCommand<bool> {
   /// Creates a [MergeGit] command
   MergeGit({
     required super.ggLog,
-    GgProcessWrapper processWrapper = const GgProcessWrapper(),
+    this._processWrapper = const GgProcessWrapper(),
     super.name = 'merge-git',
     super.description = 'Create a pull request, optionally automerged',
-  }) : _processWrapper = processWrapper {
+  }) {
     _addArgs();
   }
 
