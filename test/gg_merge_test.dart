@@ -1,10 +1,11 @@
 // @license
-// Copyright (c) 2019 - 2024 Dr. Gabriel Gatzsche. All Rights Reserved.
+// Copyright (c) ggsuite
 //
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
 import 'dart:io';
+
 import 'package:gg_args/gg_args.dart';
 import 'package:gg_merge/gg_merge.dart';
 import 'package:test/test.dart';

@@ -1,5 +1,5 @@
 // @license
-// Copyright (c) 2025 Dr. Gabriel Gatzsche. All Rights Reserved.
+// Copyright (c) ggsuite
 //
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
@@ -20,10 +20,10 @@ class MergeGit extends DirCommand<bool> {
   /// Creates a [MergeGit] command
   MergeGit({
     required super.ggLog,
-    GgProcessWrapper processWrapper = const GgProcessWrapper(),
+    this._processWrapper = const GgProcessWrapper(),
     super.name = 'merge-git',
     super.description = 'Create a pull request, optionally automerged',
-  }) : _processWrapper = processWrapper {
+  }) {
     _addArgs();
   }
 

@@ -1,5 +1,5 @@
 // @license
-// Copyright (c) 2025 Göran Hegenberg. All Rights Reserved.
+// Copyright (c) ggsuite
 //
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
@@ -17,12 +17,12 @@ class LocalMerge extends DirCommand<bool> {
   /// Creates a [LocalMerge] command
   LocalMerge({
     required super.ggLog,
-    GgProcessWrapper processWrapper = const GgProcessWrapper(),
+    this._processWrapper = const GgProcessWrapper(),
     super.name = 'local-merge',
     super.description =
         'Performs a local merge into '
         'main without remote providers.',
-  }) : _processWrapper = processWrapper {
+  }) {
     _addArgs();
   }
 

@@ -1,5 +1,5 @@
 // @license
-// Copyright (c) 2025 Göran Hegenberg. All Rights Reserved.
+// Copyright (c) ggsuite
 //
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
@@ -29,14 +29,12 @@ class WaitForMerge extends DirCommand<bool> {
   /// Creates a [WaitForMerge] command
   WaitForMerge({
     required super.ggLog,
-    GgProcessWrapper processWrapper = const GgProcessWrapper(),
-    Duration pollInterval = const Duration(seconds: 15),
+    this._processWrapper = const GgProcessWrapper(),
+    this._pollInterval = const Duration(seconds: 15),
     Future<void> Function(Duration)? delay,
     super.name = 'wait-for-merge',
     super.description = 'Wait until the pull request is merged',
-  }) : _processWrapper = processWrapper,
-       _pollInterval = pollInterval,
-       _delay = delay ?? Future<void>.delayed;
+  }) : _delay = delay ?? Future<void>.delayed;
 
   final GgProcessWrapper _processWrapper;
   final Duration _pollInterval;

@@ -1,16 +1,18 @@
 // @license
-// Copyright (c) 2025 Göran Hegenberg. All Rights Reserved.
+// Copyright (c) ggsuite
 //
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
 import 'dart:io';
+
 import 'package:gg_merge/src/commands/do_merge.dart';
 import 'package:gg_merge/src/commands/can_merge.dart';
 import 'package:gg_merge/src/commands/merge_git.dart';
 import 'package:gg_merge/src/commands/local_merge.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
+
 import '../helpers.dart';
 
 class _MockCanMerge extends Mock implements CanMerge {}

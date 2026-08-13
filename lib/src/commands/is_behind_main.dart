@@ -1,5 +1,5 @@
 // @license
-// Copyright (c) 2025 Dr. Gabriel Gatzsche. All Rights Reserved.
+// Copyright (c) ggsuite
 //
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
@@ -18,10 +18,10 @@ class IsBehindMain extends DirCommand<bool> {
   /// Creates a [IsBehindMain] command
   IsBehindMain({
     required super.ggLog,
-    GgProcessWrapper processWrapper = const GgProcessWrapper(),
+    this._processWrapper = const GgProcessWrapper(),
     super.name = 'is-behind-main',
     super.description = 'Checks if the current branch is behind main.',
-  }) : _processWrapper = processWrapper;
+  });
 
   final GgProcessWrapper _processWrapper;
 
