@@ -18,3 +18,4 @@ export 'src/commands/do_merge.dart';
 export 'src/commands/local_merge.dart';
 export 'src/commands/wait_for_merge.dart';
 export 'src/util/command_helpers.dart';
+export 'src/util/azure_urls.dart';

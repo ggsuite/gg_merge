@@ -13,6 +13,7 @@ import 'package:gg_log/gg_log.dart';
 import 'package:gg_process/gg_process.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
 
+import '../util/azure_urls.dart';
 import '../util/command_helpers.dart';
 
 /// Polls the pull request of the current branch until it has been merged.
@@ -199,12 +200,9 @@ class WaitForMerge extends DirCommand<bool> {
       }
     }
 
-    // The web page of the PR: <repository.webUrl>/pullrequest/<id>.
-    final repository = newest?['repository'];
-    final webUrl = repository is Map ? repository['webUrl']?.toString() : null;
-    final url = (webUrl == null || newest == null)
-        ? null
-        : '$webUrl/pullrequest/${newest['pullRequestId']}';
+    // `az` reports no web url of the pull request — the page is assembled
+    // from the repository it does report, the same way the review does.
+    final url = newest == null ? null : azurePullRequestWebUrl(newest);
 
     return (status: newest?['status']?.toString(), url: url);
   }

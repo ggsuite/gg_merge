@@ -90,7 +90,59 @@ void main() {
         expect(messages.any((m) => m.contains('merged')), isTrue);
       });
 
-      test('logs the PR web page built from repository.webUrl', () async {
+      test('logs the PR web page assembled from the repository az '
+          'reports — it carries no web url', () async {
+        // One pull request as `az repos pr list` prints it on current `az`
+        // versions: the rest api url plus project and repository names, no
+        // `webUrl`, `remoteUrl` null.
+        String azurePr(String status) =>
+            '[{"pullRequestId":138,"status":"$status","repository":{'
+            '"name":"r","project":{"name":"p"},"remoteUrl":null,'
+            '"url":"https://dev.azure.com/o/902c4d10'
+            '/_apis/git/repositories/e8321401"}}]';
+        stubOriginUrl('https://dev.azure.com/you/project');
+        stubCurrentBranch('138');
+        stubSequence('az', 'list', [
+          ProcessResult(0, 0, azurePr('active'), ''),
+          ProcessResult(0, 0, azurePr('completed'), ''),
+        ]);
+        final result = await waitForMerge.get(directory: d, ggLog: ggLog);
+        expect(result, isTrue);
+        expect(
+          messages.any(
+            (m) =>
+                m.contains('https://dev.azure.com/o/p/_git/r/pullrequest/138'),
+          ),
+          isTrue,
+        );
+        expect(
+          messages.any((m) => m.contains('the pull request of 138')),
+          isFalse,
+        );
+      });
+
+      test('names the pull request when az reports nothing the web page '
+          'can be built from', () async {
+        stubOriginUrl('https://dev.azure.com/you/project');
+        stubCurrentBranch('138');
+        stubSequence('az', 'list', [
+          ProcessResult(0, 0, '[{"pullRequestId":138,"status":"active"}]', ''),
+          ProcessResult(
+            0,
+            0,
+            '[{"pullRequestId":138,"status":"completed"}]',
+            '',
+          ),
+        ]);
+        final result = await waitForMerge.get(directory: d, ggLog: ggLog);
+        expect(result, isTrue);
+        expect(
+          messages.any((m) => m.contains('the pull request of 138')),
+          isTrue,
+        );
+      });
+
+      test('logs the PR web page built from repository.remoteUrl', () async {
         stubOriginUrl('https://dev.azure.com/you/project');
         stubCurrentBranch('feature');
         stubSequence('az', 'list', [
@@ -98,14 +150,14 @@ void main() {
             0,
             0,
             '[{"pullRequestId":42,"status":"active",'
-                '"repository":{"webUrl":"https://dev.azure.com/o/p/_git/r"}}]',
+                '"repository":{"remoteUrl":"https://o@dev.azure.com/o/p/_git/r"}}]',
             '',
           ),
           ProcessResult(
             0,
             0,
             '[{"pullRequestId":42,"status":"completed",'
-                '"repository":{"webUrl":"https://dev.azure.com/o/p/_git/r"}}]',
+                '"repository":{"remoteUrl":"https://o@dev.azure.com/o/p/_git/r"}}]',
             '',
           ),
         ]);
