@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Shared Azure DevOps url helpers `azurePullRequestWebUrl`, `azureRepositoryWebUrl` and `azureOrganizationUrl`
+
+### Fixed
+
+- `WaitForMerge` prints the web url of an Azure DevOps pull request instead of "the pull request of <branch>"
+
 ## 3.5.0 - 2026-09-02
 
 ### Changed
