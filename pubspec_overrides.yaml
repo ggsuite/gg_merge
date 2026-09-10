@@ -6,3 +6,5 @@
 dependency_overrides:
   gg_git:
     path: ../gg_git
+  gg_lang:
+    path: ../gg_lang
