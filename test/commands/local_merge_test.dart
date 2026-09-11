@@ -7,6 +7,8 @@
 import 'dart:io';
 
 import 'package:args/command_runner.dart';
+import 'package:gg_git/gg_git.dart';
+import 'package:gg_git/gg_git_test_helpers.dart';
 import 'package:gg_merge/src/commands/local_merge.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
@@ -24,13 +26,20 @@ void main() {
     late Directory d;
     late LocalMerge localMerge;
     late MockGgProcessWrapper processWrapper;
+    late MockDefaultBranch defaultBranch;
     final messages = <String>[];
     final ggLog = messages.add;
 
     setUp(() async {
       d = await Directory.systemTemp.createTemp('ggmerge_test_');
       processWrapper = MockGgProcessWrapper();
-      localMerge = LocalMerge(ggLog: ggLog, processWrapper: processWrapper);
+      defaultBranch = MockDefaultBranch();
+      mockDefaultBranch(defaultBranch, 'main');
+      localMerge = LocalMerge(
+        ggLog: ggLog,
+        processWrapper: processWrapper,
+        defaultBranch: defaultBranch,
+      );
       messages.clear();
     });
 
@@ -49,11 +58,15 @@ void main() {
       ).thenAnswer((_) async => ProcessResult(0, 0, branch, ''));
     }
 
-    void mockCheckoutMain({int exitCode = 0, String stderr = ''}) {
+    void mockCheckoutMain({
+      String branch = 'main',
+      int exitCode = 0,
+      String stderr = '',
+    }) {
       when(
         () => processWrapper.run(
           any(),
-          ['checkout', 'main'],
+          ['checkout', branch],
           runInShell: true,
           workingDirectory: d.path,
         ),
@@ -232,6 +245,140 @@ void main() {
           ),
         ),
       );
+    });
+
+    test('merges into the default branch of the repository', () async {
+      mockDefaultBranch(defaultBranch, 'develop');
+      mockCurrentBranch('feature');
+      mockCheckoutMain(branch: 'develop');
+      mockSquash('feature');
+      mockCommit('Merged feature into develop');
+
+      final result = await localMerge.get(directory: d, ggLog: ggLog);
+      expect(result, isTrue);
+      verify(
+        () => processWrapper.run(
+          any(),
+          ['checkout', 'develop'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).called(1);
+      verify(
+        () => processWrapper.run(
+          any(),
+          ['commit', '-m', 'Merged feature into develop'],
+          runInShell: true,
+          workingDirectory: d.path,
+        ),
+      ).called(1);
+    });
+
+    test('merges into mainBranch when the caller names it', () async {
+      mockCurrentBranch('feature');
+      mockCheckoutMain(branch: 'release');
+      mockSquash('feature');
+      mockCommit('Merged feature into release');
+
+      final result = await localMerge.get(
+        directory: d,
+        ggLog: ggLog,
+        mainBranch: 'release',
+      );
+      expect(result, isTrue);
+      verifyNever(
+        () => defaultBranch.get(
+          directory: any(named: 'directory'),
+          ggLog: any(named: 'ggLog'),
+        ),
+      );
+    });
+
+    test('throws if already on the default branch', () async {
+      mockDefaultBranch(defaultBranch, 'develop');
+      mockCurrentBranch('develop');
+      expect(
+        () => localMerge.exec(directory: d, ggLog: ggLog),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('Already on develop'),
+          ),
+        ),
+      );
+    });
+
+    test('throws when the repository has no default branch', () async {
+      mockDefaultBranch(defaultBranch, '');
+      await expectLater(
+        () => localMerge.get(directory: d, ggLog: ggLog),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('No default branch found (origin/HEAD, main, master)'),
+          ),
+        ),
+      );
+      verifyNever(
+        () => processWrapper.run(
+          any(),
+          any(),
+          runInShell: any(named: 'runInShell'),
+          workingDirectory: any(named: 'workingDirectory'),
+        ),
+      );
+    });
+
+    group('with a repository whose default branch is develop', () {
+      late Directory local;
+      late Directory remote;
+
+      setUp(() async {
+        (local, remote) = await initLocalAndRemoteGitWithDefault('develop');
+        localMerge = LocalMerge(ggLog: ggLog);
+      });
+
+      tearDown(() async {
+        await local.delete(recursive: true);
+        await remote.delete(recursive: true);
+      });
+
+      test('squash-merges the feature branch into develop', () async {
+        await runGitOrThrow(local, ['checkout', '-b', 'feature']);
+        await addAndCommitSampleFile(local, fileName: 'work', content: 'x');
+
+        final result = await localMerge.get(directory: local, ggLog: ggLog);
+        expect(result, isTrue);
+
+        final branch = await runGitOrThrow(local, [
+          'rev-parse',
+          '--abbrev-ref',
+          'HEAD',
+        ]);
+        expect(branch, 'develop');
+        final subject = await runGitOrThrow(local, [
+          'log',
+          '-1',
+          '--format=%s',
+        ]);
+        expect(subject, 'Merged feature into develop');
+        expect(await File('${local.path}/work').exists(), isTrue);
+      });
+
+      test('refuses to merge develop into itself', () async {
+        await expectLater(
+          () => localMerge.get(directory: local, ggLog: ggLog),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'message',
+              contains('Already on develop branch'),
+            ),
+          ),
+        );
+      });
     });
 
     group('--verbose', () {

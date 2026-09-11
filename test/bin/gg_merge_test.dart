@@ -19,7 +19,10 @@ void main() {
       );
       final stdout = result.stdout as String;
       expect(stdout.toLowerCase(), contains('can-merge'));
-      expect(stdout, contains('Checks if merge to main is allowed'));
+      expect(
+        stdout,
+        contains('Checks if merging into the default branch is allowed'),
+      );
     });
   });
 }

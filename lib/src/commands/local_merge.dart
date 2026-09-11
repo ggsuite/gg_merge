@@ -8,25 +8,32 @@ import 'dart:io';
 
 import 'package:gg_args/gg_args.dart';
 import 'package:gg_console_colors/gg_console_colors.dart';
+import 'package:gg_git/gg_git.dart';
 import 'package:gg_log/gg_log.dart';
 import 'package:gg_process/gg_process.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
 
-/// Performs a local merge into main without remote providers.
+import '../util/command_helpers.dart';
+
+/// Performs a local merge into the default branch without remote providers.
 class LocalMerge extends DirCommand<bool> {
   /// Creates a [LocalMerge] command
   LocalMerge({
     required super.ggLog,
     this._processWrapper = const GgProcessWrapper(),
+    DefaultBranch? defaultBranch,
     super.name = 'local-merge',
     super.description =
         'Performs a local merge into '
-        'main without remote providers.',
-  }) {
+        'the default branch without remote providers.',
+  }) : _defaultBranch =
+           defaultBranch ??
+           DefaultBranch(ggLog: ggLog, processWrapper: _processWrapper) {
     _addArgs();
   }
 
   final GgProcessWrapper _processWrapper;
+  final DefaultBranch _defaultBranch;
 
   @override
   Future<bool> exec({
@@ -35,7 +42,7 @@ class LocalMerge extends DirCommand<bool> {
     Map<String, dynamic> options = const {},
   }) async {
     return await GgStatusPrinter<bool>(
-      message: 'Performing local merge into main.',
+      message: 'Performing local merge into the default branch.',
       ggLog: ggLog,
       dark: true,
     ).logTask(
@@ -44,14 +51,25 @@ class LocalMerge extends DirCommand<bool> {
     );
   }
 
+  /// Squash-merges the current branch into the default branch.
+  ///
+  /// [mainBranch] names the target branch. Without it the repository's
+  /// default branch is used (`origin/HEAD`, else `main`, else `master`).
   @override
   Future<bool> get({
     required Directory directory,
     required GgLog ggLog,
     String? message,
     bool? verbose,
+    String? mainBranch,
   }) async {
     final isVerbose = verbose ?? _verboseFromArgs;
+    final targetBranch = await resolveMainBranch(
+      defaultBranch: _defaultBranch,
+      directory: directory,
+      ggLog: ggLog,
+      mainBranch: mainBranch,
+    );
 
     // Get current branch
     final currentBranchResult = await _run(
@@ -67,20 +85,22 @@ class LocalMerge extends DirCommand<bool> {
       );
     }
     final currentBranch = currentBranchResult.stdout.toString().trim();
-    if (currentBranch == 'main') {
-      throw Exception('Already on main branch; nothing to merge.');
+    if (currentBranch == targetBranch) {
+      throw Exception('Already on $targetBranch branch; nothing to merge.');
     }
 
-    // Checkout main
+    // Checkout the default branch
     final checkoutResult = await _run(
       'git',
-      ['checkout', 'main'],
+      ['checkout', targetBranch],
       directory: directory,
       ggLog: ggLog,
       verbose: isVerbose,
     );
     if (checkoutResult.exitCode != 0) {
-      throw Exception('Failed to checkout main: ${checkoutResult.stderr}');
+      throw Exception(
+        'Failed to checkout $targetBranch: ${checkoutResult.stderr}',
+      );
     }
 
     // Merge current branch with squash
@@ -98,7 +118,7 @@ class LocalMerge extends DirCommand<bool> {
     // No gg prefix, even in the fallback: this commit lands on the default
     // branch, and a »#gg: « subject there would claim it is gg bookkeeping —
     // the default branch carries releases and tags only.
-    final commitMessage = message ?? 'Merged $currentBranch into main';
+    final commitMessage = message ?? 'Merged $currentBranch into $targetBranch';
     final commitResult = await _run(
       'git',
       ['commit', '-m', commitMessage],

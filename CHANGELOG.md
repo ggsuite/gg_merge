@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.7.0 - 2026-09-11
+
+### Fixed
+
+- `IsBehindMain`, `IsAheadMain`, `CanMerge` and `LocalMerge` use the repository's default branch instead of `main`
+- `WaitForMerge` no longer aborts on the moment GitHub reports an auto-merged pull request as CLOSED; a CLOSED pull request with a merge date counts as merged
+
 ## 3.6.0 - 2026-09-11
 
 ### Added
