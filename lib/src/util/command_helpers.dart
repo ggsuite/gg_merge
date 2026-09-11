@@ -6,6 +6,8 @@
 
 import 'dart:io';
 
+import 'package:gg_git/gg_git.dart';
+import 'package:gg_log/gg_log.dart';
 import 'package:gg_process/gg_process.dart';
 
 /// Parses a string of format 'A B' (e.g., '3 2') to (behind, ahead) tuple.
@@ -58,4 +60,25 @@ Future<String?> readOriginUrl({
     return null;
   }
   return result.stdout.toString().trim();
+}
+
+/// The name of the branch a merge targets — the repository's default branch.
+///
+/// [mainBranch] wins when the caller already knows the name (e.g. `CanMerge`
+/// resolves it once and hands it to `IsBehindMain` and `IsAheadMain`).
+/// Otherwise [defaultBranch] reads it from the repository: `origin/HEAD`,
+/// else `main`, else `master`. A repository without any of these has no
+/// merge target, which is an error rather than a silent `main`.
+Future<String> resolveMainBranch({
+  required DefaultBranch defaultBranch,
+  required Directory directory,
+  required GgLog ggLog,
+  String? mainBranch,
+}) async {
+  final name =
+      mainBranch ?? await defaultBranch.get(directory: directory, ggLog: ggLog);
+  if (name.isEmpty) {
+    throw Exception('No default branch found (origin/HEAD, main, master).');
+  }
+  return name;
 }

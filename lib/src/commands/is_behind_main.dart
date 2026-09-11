@@ -7,23 +7,29 @@
 import 'dart:io';
 
 import 'package:gg_args/gg_args.dart';
+import 'package:gg_git/gg_git.dart';
 import 'package:gg_log/gg_log.dart';
 import 'package:gg_process/gg_process.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
 
 import '../util/command_helpers.dart';
 
-/// Checks if the branch is behind main.
+/// Checks if the branch is behind the default branch.
 class IsBehindMain extends DirCommand<bool> {
   /// Creates a [IsBehindMain] command
   IsBehindMain({
     required super.ggLog,
     this._processWrapper = const GgProcessWrapper(),
+    DefaultBranch? defaultBranch,
     super.name = 'is-behind-main',
-    super.description = 'Checks if the current branch is behind main.',
-  });
+    super.description =
+        'Checks if the current branch is behind the default branch.',
+  }) : _defaultBranch =
+           defaultBranch ??
+           DefaultBranch(ggLog: ggLog, processWrapper: _processWrapper);
 
   final GgProcessWrapper _processWrapper;
+  final DefaultBranch _defaultBranch;
 
   @override
   Future<bool> exec({
@@ -32,7 +38,7 @@ class IsBehindMain extends DirCommand<bool> {
     Map<String, dynamic> options = const {},
   }) async {
     return await GgStatusPrinter<bool>(
-      message: 'Checking if branch is behind main.',
+      message: 'Checking if branch is behind the default branch.',
       ggLog: ggLog,
       dark: true,
     ).logTask(
@@ -41,12 +47,24 @@ class IsBehindMain extends DirCommand<bool> {
     );
   }
 
-  /// Returns true if the current branch is behind main (B > 0)
+  /// Returns true if the current branch is behind the default branch
+  /// (B > 0). [mainBranch] names that branch; without it the name is read
+  /// from the repository (`origin/HEAD`, else `main`, else `master`).
   @override
-  Future<bool> get({required Directory directory, required GgLog ggLog}) async {
+  Future<bool> get({
+    required Directory directory,
+    required GgLog ggLog,
+    String? mainBranch,
+  }) async {
+    final branch = await resolveMainBranch(
+      defaultBranch: _defaultBranch,
+      directory: directory,
+      ggLog: ggLog,
+      mainBranch: mainBranch,
+    );
     final result = await _processWrapper.run(
       'git',
-      ['rev-list', '--left-right', '--count', 'origin/main...HEAD'],
+      ['rev-list', '--left-right', '--count', 'origin/$branch...HEAD'],
       runInShell: true,
       workingDirectory: directory.path,
     );

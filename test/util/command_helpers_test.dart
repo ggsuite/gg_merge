@@ -6,14 +6,19 @@
 
 import 'dart:io';
 
+import 'package:gg_git/gg_git.dart';
 import 'package:gg_process/gg_process.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:gg_merge/src/util/command_helpers.dart';
 
+import '../helpers.dart';
+
 class _MockGgProcessWrapper extends Mock implements GgProcessWrapper {}
 
 void main() {
+  setUpAll(registerTestFallbacks);
+
   group('parseGitAheadBehind', () {
     test('parses string of format "A B" into tuple of ints', () {
       expect(parseGitAheadBehind('3 2'), (3, 2));
@@ -129,6 +134,60 @@ void main() {
       expect(
         await readOriginUrl(directory: d, processWrapper: processWrapper),
         isNull,
+      );
+    });
+  });
+
+  group('resolveMainBranch', () {
+    late MockDefaultBranch defaultBranch;
+    final messages = <String>[];
+    final ggLog = messages.add;
+    final d = Directory.current;
+
+    setUp(() => defaultBranch = MockDefaultBranch());
+
+    test('returns mainBranch without asking the repository', () async {
+      final result = await resolveMainBranch(
+        defaultBranch: defaultBranch,
+        directory: d,
+        ggLog: ggLog,
+        mainBranch: 'release',
+      );
+      expect(result, 'release');
+      verifyNever(
+        () => defaultBranch.get(
+          directory: any(named: 'directory'),
+          ggLog: any(named: 'ggLog'),
+        ),
+      );
+    });
+
+    test('reads the default branch from the repository', () async {
+      mockDefaultBranch(defaultBranch, 'develop');
+      final result = await resolveMainBranch(
+        defaultBranch: defaultBranch,
+        directory: d,
+        ggLog: ggLog,
+      );
+      expect(result, 'develop');
+      verify(() => defaultBranch.get(directory: d, ggLog: ggLog)).called(1);
+    });
+
+    test('throws when the repository has no default branch', () async {
+      mockDefaultBranch(defaultBranch, '');
+      await expectLater(
+        () => resolveMainBranch(
+          defaultBranch: defaultBranch,
+          directory: d,
+          ggLog: ggLog,
+        ),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('No default branch found (origin/HEAD, main, master)'),
+          ),
+        ),
       );
     });
   });
