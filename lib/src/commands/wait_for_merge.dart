@@ -215,16 +215,29 @@ class WaitForMerge extends DirCommand<bool> {
     bool autoMerge,
   ) async {
     var asked = false;
+    var closedPolls = 0;
     while (true) {
       final pr = await _gitHubPr(directory, branch);
       final state = pr.state;
-      if (state == 'MERGED') {
+      if (state == 'MERGED' || (state == 'CLOSED' && pr.merged)) {
         ggLog(cDetail('✓ Pull request for $branch merged.'));
         return true;
       }
       if (state == 'CLOSED') {
-        throw Exception('Pull request for $branch was closed without merging.');
+        // GitHub reports a pull request its auto-merge just completed as
+        // `CLOSED` for a moment — `mergedAt` still empty — before it turns
+        // `MERGED`. One such poll is no abandoned pull request; only a
+        // `CLOSED` that stays through [closedPollsBeforeGivingUp] polls is.
+        closedPolls++;
+        if (closedPolls >= closedPollsBeforeGivingUp) {
+          throw Exception(
+            'Pull request for $branch was closed without merging.',
+          );
+        }
+        await _delay(_pollInterval);
+        continue;
       }
+      closedPolls = 0;
       if (state == null) {
         throw Exception('No pull request found for branch $branch.');
       }
@@ -236,7 +249,14 @@ class WaitForMerge extends DirCommand<bool> {
     }
   }
 
-  Future<({String? state, String? url})> _gitHubPr(
+  /// How many consecutive `CLOSED` polls a GitHub pull request may show
+  /// before it counts as closed without merging — see [_waitGitHub].
+  static const int closedPollsBeforeGivingUp = 4;
+
+  /// The state of the pull request of [branch]: its `state`, its web url and
+  /// whether GitHub has a merge date for it — a `CLOSED` pull request with
+  /// one was merged, whatever the state says.
+  Future<({String? state, String? url, bool merged})> _gitHubPr(
     Directory directory,
     String branch,
   ) async {
@@ -250,7 +270,7 @@ class WaitForMerge extends DirCommand<bool> {
         '--state',
         'all',
         '--json',
-        'state,url',
+        'state,url,mergedAt',
         '--limit',
         '1',
       ],
@@ -262,17 +282,22 @@ class WaitForMerge extends DirCommand<bool> {
     }
     final out = result.stdout.toString().trim();
     if (out.isEmpty) {
-      return (state: null, url: null);
+      return (state: null, url: null, merged: false);
     }
     final decoded = jsonDecode(out);
     if (decoded is! List || decoded.isEmpty) {
-      return (state: null, url: null);
+      return (state: null, url: null, merged: false);
     }
     final first = decoded.first;
     if (first is Map) {
-      return (state: first['state']?.toString(), url: first['url']?.toString());
+      final mergedAt = first['mergedAt']?.toString() ?? '';
+      return (
+        state: first['state']?.toString(),
+        url: first['url']?.toString(),
+        merged: mergedAt.isNotEmpty && mergedAt != 'null',
+      );
     }
-    return (state: null, url: null);
+    return (state: null, url: null, merged: false);
   }
 }
 

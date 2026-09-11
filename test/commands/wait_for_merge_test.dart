@@ -414,6 +414,75 @@ void main() {
         );
       });
 
+      // GitHub shows a pull request its auto-merge just completed as
+      // `CLOSED` for a moment before it turns `MERGED`. That moment must not
+      // abort the release.
+      test(
+        'keeps polling through a transient CLOSED and returns on MERGED',
+        () async {
+          stubOriginUrl('https://github.com/me/repo.git');
+          stubCurrentBranch('feature');
+          stubSequence('gh', 'list', [
+            ProcessResult(0, 0, '[{"state":"OPEN"}]', ''),
+            ProcessResult(0, 0, '[{"state":"CLOSED","mergedAt":null}]', ''),
+            ProcessResult(0, 0, '[{"state":"MERGED"}]', ''),
+          ]);
+          final result = await waitForMerge.get(directory: d, ggLog: ggLog);
+          expect(result, isTrue);
+          expect(messages.any((m) => m.contains('merged')), isTrue);
+        },
+      );
+
+      test(
+        'treats a CLOSED pull request with a merge date as merged',
+        () async {
+          stubOriginUrl('https://github.com/me/repo.git');
+          stubCurrentBranch('feature');
+          stubSequence('gh', 'list', [
+            ProcessResult(
+              0,
+              0,
+              '[{"state":"CLOSED","mergedAt":"2026-09-11T00:05:00Z"}]',
+              '',
+            ),
+          ]);
+          final result = await waitForMerge.get(directory: d, ggLog: ggLog);
+          expect(result, isTrue);
+          expect(messages.any((m) => m.contains('merged')), isTrue);
+        },
+      );
+
+      test(
+        'gives up on a CLOSED pull request only after several polls',
+        () async {
+          stubOriginUrl('https://github.com/me/repo.git');
+          stubCurrentBranch('feature');
+          var polls = 0;
+          when(
+            () => processWrapper.run(
+              'gh',
+              any(that: contains('list')),
+              runInShell: true,
+              workingDirectory: d.path,
+            ),
+          ).thenAnswer((_) async {
+            polls++;
+            return ProcessResult(0, 0, '[{"state":"CLOSED"}]', '');
+          });
+          await expectLater(
+            () => waitForMerge.get(directory: d, ggLog: ggLog),
+            throwsA(
+              isA<Exception>().having(
+                (e) => e.toString(),
+                'msg',
+                contains('closed without merging'),
+              ),
+            ),
+          );
+          expect(polls, WaitForMerge.closedPollsBeforeGivingUp);
+        },
+      );
+
       test('throws when the PR was closed without merging', () async {
         stubOriginUrl('https://github.com/me/repo.git');
         stubCurrentBranch('feature');
