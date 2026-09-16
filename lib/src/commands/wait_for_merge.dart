@@ -150,6 +150,15 @@ class WaitForMerge extends DirCommand<bool> {
       }
       if (!asked) {
         asked = true;
+        if (pr.url == null || pr.url!.isEmpty) {
+          ggLog(
+            cWarn(
+              'Warning: Could not determine the Azure DevOps pull request '
+              'URL because `az repos pr list` returned no usable repository '
+              'metadata.',
+            ),
+          );
+        }
         _askToMerge(ggLog, branch, pr.url, autoMerge);
       }
       await _delay(_pollInterval);
