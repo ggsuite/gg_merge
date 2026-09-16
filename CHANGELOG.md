@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.7.1 - 2026-09-16
+
+### Changed
+
+- Warn when Azure PR metadata cannot provide a URL
+
 ## 3.7.0 - 2026-09-11
 
 ### Fixed

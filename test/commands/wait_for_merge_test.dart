@@ -106,7 +106,11 @@ void main() {
           ProcessResult(0, 0, azurePr('active'), ''),
           ProcessResult(0, 0, azurePr('completed'), ''),
         ]);
-        final result = await waitForMerge.get(directory: d, ggLog: ggLog);
+        final result = await waitForMerge.get(
+          directory: d,
+          ggLog: ggLog,
+          autoMerge: true,
+        );
         expect(result, isTrue);
         expect(
           messages.any(
@@ -119,10 +123,13 @@ void main() {
           messages.any((m) => m.contains('the pull request of 138')),
           isFalse,
         );
+        expect(
+          messages.any((m) => m.contains('no usable repository metadata')),
+          isFalse,
+        );
       });
 
-      test('names the pull request when az reports nothing the web page '
-          'can be built from', () async {
+      test('warns when repository metadata cannot provide a PR url', () async {
         stubOriginUrl('https://dev.azure.com/you/project');
         stubCurrentBranch('138');
         stubSequence('az', 'list', [
@@ -134,11 +141,24 @@ void main() {
             '',
           ),
         ]);
-        final result = await waitForMerge.get(directory: d, ggLog: ggLog);
+        final result = await waitForMerge.get(
+          directory: d,
+          ggLog: ggLog,
+          autoMerge: true,
+        );
         expect(result, isTrue);
         expect(
           messages.any((m) => m.contains('the pull request of 138')),
           isTrue,
+        );
+        expect(
+          messages.where(
+            (m) =>
+                m.contains('Warning:') &&
+                m.contains('Azure DevOps pull request URL') &&
+                m.contains('no usable repository metadata'),
+          ),
+          hasLength(1),
         );
       });
 
