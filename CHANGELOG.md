@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.7.2 - 2026-09-22
+
+### Changed
+
+- "Quiet
+- "Tighten
+
 ## 3.7.1 - 2026-09-16
 
 ### Changed
