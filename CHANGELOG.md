@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- UpdateProjectGit skips the pull when the current branch has no upstream left (remote branch merged and deleted, e.g. by an auto-completed pull request) and retries fetch and pull on transient network errors
+
 ## 3.7.2 - 2026-09-22
 
 ### Changed
