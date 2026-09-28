@@ -7,6 +7,8 @@
 import 'dart:io';
 
 import 'package:gg_args/gg_args.dart';
+import 'package:gg_console_colors/gg_console_colors.dart';
+import 'package:gg_git/gg_git.dart';
 import 'package:gg_log/gg_log.dart';
 import 'package:gg_process/gg_process.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
@@ -17,11 +19,10 @@ class UpdateProjectGit extends DirCommand<bool> {
   UpdateProjectGit({
     required super.ggLog,
     this._processWrapper = const GgProcessWrapper(),
+    this._gitRetry = const GitRetry(),
     super.name = 'update-project-git',
     super.description = 'Fetches and pulls remote state for all branches.',
   });
-
-  final GgProcessWrapper _processWrapper;
 
   @override
   Future<bool> exec({
@@ -39,29 +40,76 @@ class UpdateProjectGit extends DirCommand<bool> {
     );
   }
 
-  /// Runs git fetch --all -p and git pull --all, returns true iff all succeed
+  /// Runs `git fetch --all -p` and `git pull`, returns true iff both succeed.
+  ///
+  /// The pull is skipped when the current branch has no upstream left to
+  /// pull from: none was ever set, or the remote branch was merged and
+  /// deleted (e.g. by an auto-completed pull request) and the fetch just
+  /// pruned it. `git pull` fails on such a branch (»Your configuration
+  /// specifies to merge with the ref … but no such ref was fetched«)
+  /// although nothing is left to bring in — the fetch already updated the
+  /// other branches, the default branch included.
+  ///
+  /// Both commands are retried on transient network errors.
   @override
   Future<bool> get({required Directory directory, required GgLog ggLog}) async {
-    final result1 = await _processWrapper.run(
-      'git',
-      ['fetch', '--all', '-p'],
-      runInShell: true,
-      workingDirectory: directory.path,
+    final fetch = await _gitRetry.run(
+      () => _run(directory, ['fetch', '--all', '-p']),
+      ggLog: ggLog,
+      description: 'git fetch --all -p',
     );
-    if (result1.exitCode != 0) {
-      throw Exception('git fetch --all failed: ${result1.stderr}');
+    if (fetch.exitCode != 0) {
+      throw Exception('git fetch --all failed: ${fetch.stderr}');
     }
-    final result2 = await _processWrapper.run(
-      'git',
-      ['pull', '--all'],
-      runInShell: true,
-      workingDirectory: directory.path,
+
+    if (!await _hasUpstream(directory)) {
+      ggLog(
+        cDetail(
+          'The current branch has no upstream to pull from (never pushed, '
+          'or merged and deleted on the remote). Skipping git pull.',
+        ),
+      );
+      return true;
+    }
+
+    final pull = await _gitRetry.run(
+      () => _run(directory, ['pull']),
+      ggLog: ggLog,
+      description: 'git pull',
     );
-    if (result2.exitCode != 0) {
-      throw Exception('git pull --all failed: ${result2.stderr}');
+    if (pull.exitCode != 0) {
+      throw Exception('git pull failed: ${pull.stderr}');
     }
     return true;
   }
+
+  // ######################
+  // Private
+  // ######################
+
+  final GgProcessWrapper _processWrapper;
+  final GitRetry _gitRetry;
+
+  // ...........................................................................
+  /// Whether the current branch has an upstream whose ref still exists.
+  Future<bool> _hasUpstream(Directory directory) async {
+    final result = await _run(directory, [
+      'rev-parse',
+      '--verify',
+      '--quiet',
+      '@{u}',
+    ]);
+    return result.exitCode == 0;
+  }
+
+  // ...........................................................................
+  Future<ProcessResult> _run(Directory directory, List<String> args) =>
+      _processWrapper.run(
+        'git',
+        args,
+        runInShell: true,
+        workingDirectory: directory.path,
+      );
 }
 
 /// Mock for unit tests
