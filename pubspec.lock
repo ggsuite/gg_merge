@@ -117,18 +117,18 @@ packages:
     dependency: transitive
     description:
       name: dna_gg
-      sha256: "318156eaba327896b4ed2574725ebb5da4b69f60b4a0ba05e29a4c24dd3ccbe5"
+      sha256: a6108d86d02702efb96374578f11a48ef46259a8596fec66553688f17df18b0d
       url: "https://pub.dev"
     source: hosted
-    version: "0.5.1"
+    version: "0.6.0"
   dna_ggsuite:
     dependency: "direct dev"
     description:
       name: dna_ggsuite
-      sha256: "4398bfd53f8f3869e819cd6782937f660f2a0d381effd0a651c4758fe5004ea2"
+      sha256: "06c436f4b89c7007d54f82b44ba97c66dc9d68acf2715a9e33a67a22d5f540f6"
       url: "https://pub.dev"
     source: hosted
-    version: "0.2.2"
+    version: "0.2.3"
   dna_guides:
     dependency: transitive
     description:
