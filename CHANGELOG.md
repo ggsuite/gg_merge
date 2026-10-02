@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.8.1 - 2026-10-02
+
+### Changed
+
+- Log why GitHub refused auto-merge
+
 ## 3.8.0 - 2026-09-28
 
 ### Changed

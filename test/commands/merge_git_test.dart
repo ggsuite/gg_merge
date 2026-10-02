@@ -517,16 +517,24 @@ void main() {
           '--auto',
           '--squash',
           '--delete-branch',
-        ], ProcessResult(3, 3, '', 'auto-merge disabled'));
+        ], ProcessResult(3, 3, '', 'auto-merge disabled\nmore details'));
         final result = await mergeGit.get(
           directory: d,
           ggLog: ggLog,
           automerge: true,
         );
         expect(result, isTrue);
-        // Not an error and not worth a log line: the pull request stays
-        // open and WaitForMerge asks the user to merge it.
-        expect(messages.any((m) => m.contains('auto-merge')), isFalse);
+        // Not an error, but the user has to know that the merge is theirs.
+        expect(
+          messages,
+          contains(
+            contains(
+              'Auto-merge is not available: auto-merge disabled\n'
+              'Merge the pull request manually once its checks pass.',
+            ),
+          ),
+        );
+        expect(messages.any((m) => m.contains('more details')), isFalse);
       });
 
       test('never merges the pull request itself when auto-merge '
@@ -583,7 +591,7 @@ void main() {
             workingDirectory: any(named: 'workingDirectory'),
           ),
         );
-        expect(messages, isEmpty);
+        expect(messages, hasLength(1));
       });
     });
 
