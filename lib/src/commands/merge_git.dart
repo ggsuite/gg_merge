@@ -88,9 +88,11 @@ class MergeGit extends DirCommand<bool> {
   /// description.
   ///
   /// Enabling automerge is best-effort: when the provider rejects it (e.g.
-  /// GitHub's "Allow auto-merge" is off, or an Azure policy forbids the
-  /// squash strategy) the PR stays open and a warning is logged instead of
-  /// failing — [WaitForMerge] still completes once the PR is merged manually.
+  /// GitHub's "Allow auto-merge" is off or `main` has no branch protection,
+  /// or an Azure policy forbids the squash strategy) the PR stays open
+  /// instead of failing — [WaitForMerge] still completes once the PR is
+  /// merged manually. On GitHub the reason is logged together with the
+  /// request to merge the PR manually.
   @override
   Future<bool> get({
     required Directory directory,
@@ -205,7 +207,7 @@ class MergeGit extends DirCommand<bool> {
 
     // Merge if automerge
     if (automerge) {
-      await _processWrapper.run(
+      final result = await _processWrapper.run(
         'gh',
         [
           'pr',
@@ -219,12 +221,21 @@ class MergeGit extends DirCommand<bool> {
         workingDirectory: directory.path,
       );
       // A failing `gh pr merge --auto` is not an error: auto-merge can be
-      // unavailable (repo setting "Allow auto-merge" off, squash merges
-      // disabled, or no pending requirements). gg never merges such a pull
-      // request on its own — the merge stays an explicit human decision.
-      // The PR is left open and [WaitForMerge] blocks until it is merged
-      // manually, asking the user for exactly that. Logging the reason here
-      // would only duplicate that request.
+      // unavailable (repo setting "Allow auto-merge" off, no branch
+      // protection on main, squash merges disabled). gg never merges such a
+      // pull request on its own — the merge stays an explicit human
+      // decision. The PR is left open and [WaitForMerge] blocks until it is
+      // merged manually. Without the warning the publish would seem to wait
+      // for an auto-merge that never comes.
+      if (result.exitCode != 0) {
+        final reason = result.stderr.toString().trim().split('\n').first;
+        ggLog(
+          cWarn(
+            'Auto-merge is not available: $reason\n'
+            'Merge the pull request manually once its checks pass.',
+          ),
+        );
+      }
     }
   }
 
