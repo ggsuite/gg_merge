@@ -189,10 +189,10 @@ packages:
     dependency: transitive
     description:
       name: dna_vscode
-      sha256: "871f90657a216c7bb2b5f6a61bd9a3e73253fd955ba527de6820fe5be0bc8202"
+      sha256: a6a1beeba1490bcb666ed98c6a7a5cbd5295fa949e09331b400777655ee0d4f7
       url: "https://pub.dev"
     source: hosted
-    version: "0.2.3"
+    version: "0.2.4"
   fake_async:
     dependency: "direct dev"
     description:
@@ -244,10 +244,9 @@ packages:
   gg_git:
     dependency: "direct main"
     description:
-      name: gg_git
-      sha256: e8717dba07600d0998b6dee8e5eb7800297594fb9e5baa7f98d173cf58da945c
-      url: "https://pub.dev"
-    source: hosted
+      path: "../gg_git"
+      relative: true
+    source: path
     version: "4.5.2"
   gg_hash:
     dependency: transitive
