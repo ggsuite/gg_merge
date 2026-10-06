@@ -310,6 +310,29 @@ void main() {
           ),
         );
       });
+
+      test('polls on through a transient network error', () async {
+        stubOriginUrl('https://dev.azure.com/you/project');
+        stubCurrentBranch('feature');
+        stubSequence('az', 'list', [
+          ProcessResult(
+            0,
+            1,
+            '',
+            'Failed to establish a new connection: '
+                '[Errno -2] Name or service not known',
+          ),
+          ProcessResult(0, 0, '[{"pullRequestId":1,"status":"completed"}]', ''),
+        ]);
+
+        expect(await waitForMerge.get(directory: d, ggLog: ggLog), isTrue);
+        expect(
+          messages.any(
+            (m) => m.contains('az repos pr list failed with a transient'),
+          ),
+          isTrue,
+        );
+      });
     });
 
     // .........................................................................
@@ -583,6 +606,67 @@ void main() {
             ),
           ),
         );
+      });
+
+      group('on a transient network error', () {
+        const offline =
+            'error connecting to api.github.com\n'
+            'check your internet connection or https://githubstatus.com';
+
+        test('polls on and returns once the PR is merged', () async {
+          stubOriginUrl('https://github.com/me/repo.git');
+          stubCurrentBranch('feature');
+          stubSequence('gh', 'list', [
+            ProcessResult(0, 0, '[{"state":"OPEN"}]', ''),
+            ProcessResult(0, 1, '', offline),
+            ProcessResult(0, 1, '', offline),
+            ProcessResult(0, 0, '[{"state":"MERGED"}]', ''),
+          ]);
+
+          final result = await waitForMerge.get(directory: d, ggLog: ggLog);
+
+          expect(result, isTrue);
+          expect(
+            messages
+                .where((m) => m.contains('transient network error'))
+                .map(rmControls),
+            [
+              'gh pr list failed with a transient network error. '
+                  'Polling again in 15s (attempt 2 of 10).',
+              'gh pr list failed with a transient network error. '
+                  'Polling again in 15s (attempt 3 of 10).',
+            ],
+          );
+        });
+
+        test('gives up after too many failed polls in a row', () async {
+          stubOriginUrl('https://github.com/me/repo.git');
+          stubCurrentBranch('feature');
+          var polls = 0;
+          when(
+            () => processWrapper.run(
+              'gh',
+              any(that: contains('list')),
+              runInShell: true,
+              workingDirectory: d.path,
+            ),
+          ).thenAnswer((_) async {
+            polls++;
+            return ProcessResult(0, 1, '', offline);
+          });
+
+          await expectLater(
+            () => waitForMerge.get(directory: d, ggLog: ggLog),
+            throwsA(
+              isA<Exception>().having(
+                (e) => e.toString(),
+                'msg',
+                contains('gh pr list failed: error connecting to'),
+              ),
+            ),
+          );
+          expect(polls, WaitForMerge.failedPollsBeforeGivingUp);
+        });
       });
     });
 

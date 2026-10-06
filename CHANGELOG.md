@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.8.3 - 2026-10-06
+
+### Changed
+
+- Retry git and gh calls on transient DNS and connection errors instead of aborting
+
 ## 3.8.2 - 2026-10-06
 
 ### Changed
