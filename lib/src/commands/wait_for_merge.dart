@@ -9,6 +9,7 @@ import 'dart:io';
 
 import 'package:gg_args/gg_args.dart';
 import 'package:gg_console_colors/gg_console_colors.dart';
+import 'package:gg_git/gg_git.dart';
 import 'package:gg_log/gg_log.dart';
 import 'package:gg_process/gg_process.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
@@ -22,7 +23,8 @@ import '../util/command_helpers.dart';
 /// that forbid direct pushes to `main` (e.g. Azure DevOps branch policies) the
 /// release cannot continue until the server merged the PR. This command blocks
 /// — polling in [pollInterval] steps — until the PR is completed/merged. It
-/// throws when the PR was abandoned/closed without merging.
+/// throws when the PR was abandoned/closed without merging. A poll that fails
+/// with a transient network error is simply repeated.
 ///
 /// A still-open pull request asks the user to merge it — once, together with
 /// the pull request url. The polling itself stays silent from there on.
@@ -136,7 +138,7 @@ class WaitForMerge extends DirCommand<bool> {
   ) async {
     var asked = false;
     while (true) {
-      final pr = await _azurePr(directory, branch);
+      final pr = await _azurePr(directory, branch, ggLog);
       final status = pr.status;
       if (status == 'completed') {
         ggLog(cDetail('✓ Pull request for $branch merged.'));
@@ -168,10 +170,14 @@ class WaitForMerge extends DirCommand<bool> {
   Future<({String? status, String? url})> _azurePr(
     Directory directory,
     String branch,
+    GgLog ggLog,
   ) async {
-    final result = await _processWrapper.run(
-      'az',
-      [
+    final result = await _listPullRequests(
+      directory: directory,
+      ggLog: ggLog,
+      description: 'az repos pr list',
+      executable: 'az',
+      arguments: [
         'repos',
         'pr',
         'list',
@@ -182,12 +188,7 @@ class WaitForMerge extends DirCommand<bool> {
         '--output',
         'json',
       ],
-      runInShell: true,
-      workingDirectory: directory.path,
     );
-    if (result.exitCode != 0) {
-      throw Exception('az repos pr list failed: ${result.stderr}');
-    }
     final out = result.stdout.toString().trim();
     if (out.isEmpty) {
       return (status: null, url: null);
@@ -226,7 +227,7 @@ class WaitForMerge extends DirCommand<bool> {
     var asked = false;
     var closedPolls = 0;
     while (true) {
-      final pr = await _gitHubPr(directory, branch);
+      final pr = await _gitHubPr(directory, branch, ggLog);
       final state = pr.state;
       if (state == 'MERGED' || (state == 'CLOSED' && pr.merged)) {
         ggLog(cDetail('✓ Pull request for $branch merged.'));
@@ -262,16 +263,66 @@ class WaitForMerge extends DirCommand<bool> {
   /// before it counts as closed without merging — see [_waitGitHub].
   static const int closedPollsBeforeGivingUp = 4;
 
+  /// How many polls in a row may fail with a transient network error before
+  /// the wait gives up — see [_listPullRequests].
+  static const int failedPollsBeforeGivingUp = 10;
+
+  // ...........................................................................
+  /// Runs the pull request lookup [executable] [arguments] and returns its
+  /// successful result.
+  ///
+  /// A failed lookup is one missed poll, not a failed merge: the pull request
+  /// keeps merging on the server while DNS or the connection hiccups, and
+  /// aborting then leaves a publish to resume by hand. So a transient network
+  /// error ([GitRetry.isTransient]) waits one poll interval and asks again,
+  /// up to [failedPollsBeforeGivingUp] times in a row. Anything else — no
+  /// login, an unknown repository — fails at once.
+  Future<ProcessResult> _listPullRequests({
+    required Directory directory,
+    required GgLog ggLog,
+    required String description,
+    required String executable,
+    required List<String> arguments,
+  }) async {
+    for (var failed = 1; ; failed++) {
+      final result = await _processWrapper.run(
+        executable,
+        arguments,
+        runInShell: true,
+        workingDirectory: directory.path,
+      );
+      if (result.exitCode == 0) {
+        return result;
+      }
+      if (!GitRetry.isTransient('${result.stderr}') ||
+          failed >= failedPollsBeforeGivingUp) {
+        throw Exception('$description failed: ${result.stderr}');
+      }
+      ggLog(
+        cDetail(
+          '$description failed with a transient network error. '
+          'Polling again in ${_pollInterval.inSeconds}s '
+          '(attempt ${failed + 1} of $failedPollsBeforeGivingUp).',
+        ),
+      );
+      await _delay(_pollInterval);
+    }
+  }
+
   /// The state of the pull request of [branch]: its `state`, its web url and
   /// whether GitHub has a merge date for it — a `CLOSED` pull request with
   /// one was merged, whatever the state says.
   Future<({String? state, String? url, bool merged})> _gitHubPr(
     Directory directory,
     String branch,
+    GgLog ggLog,
   ) async {
-    final result = await _processWrapper.run(
-      'gh',
-      [
+    final result = await _listPullRequests(
+      directory: directory,
+      ggLog: ggLog,
+      description: 'gh pr list',
+      executable: 'gh',
+      arguments: [
         'pr',
         'list',
         '--head',
@@ -283,12 +334,7 @@ class WaitForMerge extends DirCommand<bool> {
         '--limit',
         '1',
       ],
-      runInShell: true,
-      workingDirectory: directory.path,
     );
-    if (result.exitCode != 0) {
-      throw Exception('gh pr list failed: ${result.stderr}');
-    }
     final out = result.stdout.toString().trim();
     if (out.isEmpty) {
       return (state: null, url: null, merged: false);
