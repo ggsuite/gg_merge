@@ -10,7 +10,7 @@ dependencies:
 
   gg_args: ^3.2.0
   gg_console_colors: ^2.5.0
-  gg_git: ^4.5.3
+  gg_git: ^4.5.4
   gg_is_flutter: ^2.2.2
   gg_lang: ^0.8.2
   gg_log: ^1.2.0
