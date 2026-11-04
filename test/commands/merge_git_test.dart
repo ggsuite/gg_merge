@@ -74,6 +74,7 @@ void main() {
           any(that: contains(subCommand)),
           runInShell: true,
           workingDirectory: d.path,
+          environment: any(named: 'environment'),
         ),
       ).thenAnswer((_) async => result);
     }
@@ -86,6 +87,7 @@ void main() {
           args,
           runInShell: true,
           workingDirectory: d.path,
+          environment: any(named: 'environment'),
         ),
       ).thenAnswer((_) async => result);
     }
@@ -622,6 +624,7 @@ void main() {
             azUpdateArgs(id: '99'),
             runInShell: true,
             workingDirectory: d.path,
+            environment: any(named: 'environment'),
           ),
         ).called(1);
       });
@@ -646,6 +649,7 @@ void main() {
             azUpdateArgs(id: '99', deleteSourceBranch: false),
             runInShell: true,
             workingDirectory: d.path,
+            environment: any(named: 'environment'),
           ),
         ).called(1);
       });
@@ -668,6 +672,7 @@ void main() {
             any(that: contains('update')),
             runInShell: true,
             workingDirectory: d.path,
+            environment: any(named: 'environment'),
           ),
         );
       });
@@ -733,6 +738,7 @@ void main() {
             ],
             runInShell: true,
             workingDirectory: d.path,
+            environment: any(named: 'environment'),
           ),
         ).called(1);
         verify(
@@ -741,6 +747,7 @@ void main() {
             azUpdateArgs(id: '11', message: 'Release 1.2.3'),
             runInShell: true,
             workingDirectory: d.path,
+            environment: any(named: 'environment'),
           ),
         ).called(1);
       });
@@ -784,6 +791,7 @@ void main() {
             ],
             runInShell: true,
             workingDirectory: d.path,
+            environment: any(named: 'environment'),
           ),
         ).called(1);
       });
@@ -829,6 +837,7 @@ void main() {
                 any(that: contains('update')),
                 runInShell: true,
                 workingDirectory: d.path,
+                environment: any(named: 'environment'),
               ),
             );
           }
@@ -876,6 +885,7 @@ void main() {
             any(that: contains('update')),
             runInShell: true,
             workingDirectory: d.path,
+            environment: any(named: 'environment'),
           ),
         );
       });

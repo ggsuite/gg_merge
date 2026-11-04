@@ -4,6 +4,12 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
+/// Forces the `az` CLI to write UTF-8 to its redirected stdout/stderr.
+/// Without it, `az` falls back to the system codepage (e.g. Windows-1252)
+/// once it is not attached to a console, garbling names like "Käßbohrer"
+/// that gg then fails to decode as UTF-8.
+const Map<String, String> azCliEnvironment = {'PYTHONIOENCODING': 'utf-8'};
+
 /// The web page of the pull request `az repos pr list` describes —
 /// `https://dev.azure.com/<org>/<project>/_git/<repo>/pullrequest/<id>` —
 /// or null when [pullRequest] does not carry what the page is built from.

@@ -13,6 +13,7 @@ import 'package:gg_log/gg_log.dart';
 import 'package:gg_process/gg_process.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
 
+import '../util/azure_urls.dart';
 import '../util/command_helpers.dart';
 
 /// Performs a merge/pull-request on GitHub or Azure DevOps.
@@ -306,6 +307,7 @@ class MergeGit extends DirCommand<bool> {
         ],
         runInShell: true,
         workingDirectory: directory.path,
+        environment: azCliEnvironment,
       );
       if (result.exitCode != 0) {
         throw Exception('az repos pr create failed: ${result.stderr}');
@@ -361,6 +363,7 @@ class MergeGit extends DirCommand<bool> {
       ],
       runInShell: true,
       workingDirectory: directory.path,
+      environment: azCliEnvironment,
     );
     // A failing lookup must not block PR creation; fall through to create.
     if (result.exitCode != 0) {
@@ -408,6 +411,7 @@ class MergeGit extends DirCommand<bool> {
       ],
       runInShell: true,
       workingDirectory: directory.path,
+      environment: azCliEnvironment,
     );
     // A failing auto-complete leaves the pull request open for a manual
     // merge — [WaitForMerge] asks for it. No extra log needed here.
