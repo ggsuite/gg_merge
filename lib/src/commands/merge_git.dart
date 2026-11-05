@@ -142,6 +142,16 @@ class MergeGit extends DirCommand<bool> {
     return true;
   }
 
+  /// Runs `az` with [args] in [directory], forcing UTF-8 output.
+  Future<ProcessResult> _runAz(Directory directory, List<String> args) =>
+      _processWrapper.run(
+        'az',
+        args,
+        runInShell: true,
+        workingDirectory: directory.path,
+        environment: azCliEnvironment,
+      );
+
   Future<String> _currentBranch(Directory directory) async {
     final result = await _processWrapper.run(
       'git',
@@ -294,21 +304,15 @@ class MergeGit extends DirCommand<bool> {
       // Create the PR plain and set auto-complete separately: completion
       // options on `az repos pr create` fail as a whole when the policy
       // rejects the merge strategy, which would leave no PR at all.
-      final result = await _processWrapper.run(
-        'az',
-        [
-          'repos',
-          'pr',
-          'create',
-          '--source-branch',
-          'refs/heads/$branch',
-          if (message != null) ...['--title', message],
-          if (body != null) ...['--description', body],
-        ],
-        runInShell: true,
-        workingDirectory: directory.path,
-        environment: azCliEnvironment,
-      );
+      final result = await _runAz(directory, [
+        'repos',
+        'pr',
+        'create',
+        '--source-branch',
+        'refs/heads/$branch',
+        if (message != null) ...['--title', message],
+        if (body != null) ...['--description', body],
+      ]);
       if (result.exitCode != 0) {
         throw Exception('az repos pr create failed: ${result.stderr}');
       }
@@ -348,23 +352,17 @@ class MergeGit extends DirCommand<bool> {
 
   /// Returns the id of an active Azure DevOps PR for [branch], or null.
   Future<String?> _existingAzurePrId(Directory directory, String branch) async {
-    final result = await _processWrapper.run(
-      'az',
-      [
-        'repos',
-        'pr',
-        'list',
-        '--source-branch',
-        'refs/heads/$branch',
-        '--status',
-        'active',
-        '--output',
-        'json',
-      ],
-      runInShell: true,
-      workingDirectory: directory.path,
-      environment: azCliEnvironment,
-    );
+    final result = await _runAz(directory, [
+      'repos',
+      'pr',
+      'list',
+      '--source-branch',
+      'refs/heads/$branch',
+      '--status',
+      'active',
+      '--output',
+      'json',
+    ]);
     // A failing lookup must not block PR creation; fall through to create.
     if (result.exitCode != 0) {
       return null;
@@ -373,7 +371,12 @@ class MergeGit extends DirCommand<bool> {
     if (out.isEmpty) {
       return null;
     }
-    final decoded = jsonDecode(out);
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(out);
+    } on FormatException {
+      return null;
+    }
     if (decoded is List && decoded.isNotEmpty) {
       final first = decoded.first;
       if (first is Map && first['pullRequestId'] != null) {
@@ -394,25 +397,19 @@ class MergeGit extends DirCommand<bool> {
     required bool deleteSourceBranch,
     required String? message,
   }) async {
-    await _processWrapper.run(
-      'az',
-      [
-        'repos',
-        'pr',
-        'update',
-        '--id',
-        id,
-        '--auto-complete',
-        'true',
-        '--squash',
-        'true',
-        if (deleteSourceBranch) ...['--delete-source-branch', 'true'],
-        if (message != null) ...['--merge-commit-message', message],
-      ],
-      runInShell: true,
-      workingDirectory: directory.path,
-      environment: azCliEnvironment,
-    );
+    await _runAz(directory, [
+      'repos',
+      'pr',
+      'update',
+      '--id',
+      id,
+      '--auto-complete',
+      'true',
+      '--squash',
+      'true',
+      if (deleteSourceBranch) ...['--delete-source-branch', 'true'],
+      if (message != null) ...['--merge-commit-message', message],
+    ]);
     // A failing auto-complete leaves the pull request open for a manual
     // merge — [WaitForMerge] asks for it. No extra log needed here.
   }

@@ -920,6 +920,25 @@ void main() {
         expect(result, isTrue);
       });
 
+      test('creates a PR when list returns malformed json', () async {
+        // A zero exit code with unparsable stdout — some az CLI versions
+        // print a banner on stdout instead of the requested json — must not
+        // crash the lookup; it falls through to create the PR like an empty
+        // or failing list.
+        stubOriginUrl('https://dev.azure.com/you/project');
+        stubCurrentBranch('feature');
+        stubAz('list', ProcessResult(0, 0, 'not-json', ''));
+        stubAz('create', ProcessResult(0, 0, '{"pullRequestId":1}', ''));
+        stubAz('update', ProcessResult(0, 0, '', ''));
+
+        final result = await mergeGit.exec(
+          directory: d,
+          ggLog: ggLog,
+          automerge: true,
+        );
+        expect(result, isTrue);
+      });
+
       test('creates a PR when list entry has no pullRequestId', () async {
         stubOriginUrl('https://dev.azure.com/you/project');
         stubCurrentBranch('feature');
