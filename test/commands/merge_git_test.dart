@@ -74,6 +74,7 @@ void main() {
           any(that: contains(subCommand)),
           runInShell: true,
           workingDirectory: d.path,
+          environment: any(named: 'environment'),
         ),
       ).thenAnswer((_) async => result);
     }
@@ -86,6 +87,7 @@ void main() {
           args,
           runInShell: true,
           workingDirectory: d.path,
+          environment: any(named: 'environment'),
         ),
       ).thenAnswer((_) async => result);
     }
@@ -622,6 +624,7 @@ void main() {
             azUpdateArgs(id: '99'),
             runInShell: true,
             workingDirectory: d.path,
+            environment: any(named: 'environment'),
           ),
         ).called(1);
       });
@@ -646,6 +649,7 @@ void main() {
             azUpdateArgs(id: '99', deleteSourceBranch: false),
             runInShell: true,
             workingDirectory: d.path,
+            environment: any(named: 'environment'),
           ),
         ).called(1);
       });
@@ -668,6 +672,7 @@ void main() {
             any(that: contains('update')),
             runInShell: true,
             workingDirectory: d.path,
+            environment: any(named: 'environment'),
           ),
         );
       });
@@ -733,6 +738,7 @@ void main() {
             ],
             runInShell: true,
             workingDirectory: d.path,
+            environment: any(named: 'environment'),
           ),
         ).called(1);
         verify(
@@ -741,6 +747,7 @@ void main() {
             azUpdateArgs(id: '11', message: 'Release 1.2.3'),
             runInShell: true,
             workingDirectory: d.path,
+            environment: any(named: 'environment'),
           ),
         ).called(1);
       });
@@ -784,6 +791,7 @@ void main() {
             ],
             runInShell: true,
             workingDirectory: d.path,
+            environment: any(named: 'environment'),
           ),
         ).called(1);
       });
@@ -829,6 +837,7 @@ void main() {
                 any(that: contains('update')),
                 runInShell: true,
                 workingDirectory: d.path,
+                environment: any(named: 'environment'),
               ),
             );
           }
@@ -876,6 +885,7 @@ void main() {
             any(that: contains('update')),
             runInShell: true,
             workingDirectory: d.path,
+            environment: any(named: 'environment'),
           ),
         );
       });
@@ -899,6 +909,25 @@ void main() {
         stubOriginUrl('https://dev.azure.com/you/project');
         stubCurrentBranch('feature');
         stubAz('list', ProcessResult(0, 0, '{}', ''));
+        stubAz('create', ProcessResult(0, 0, '{"pullRequestId":1}', ''));
+        stubAz('update', ProcessResult(0, 0, '', ''));
+
+        final result = await mergeGit.exec(
+          directory: d,
+          ggLog: ggLog,
+          automerge: true,
+        );
+        expect(result, isTrue);
+      });
+
+      test('creates a PR when list returns malformed json', () async {
+        // A zero exit code with unparsable stdout — some az CLI versions
+        // print a banner on stdout instead of the requested json — must not
+        // crash the lookup; it falls through to create the PR like an empty
+        // or failing list.
+        stubOriginUrl('https://dev.azure.com/you/project');
+        stubCurrentBranch('feature');
+        stubAz('list', ProcessResult(0, 0, 'not-json', ''));
         stubAz('create', ProcessResult(0, 0, '{"pullRequestId":1}', ''));
         stubAz('update', ProcessResult(0, 0, '', ''));
 

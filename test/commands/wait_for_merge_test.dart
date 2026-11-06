@@ -69,6 +69,7 @@ void main() {
           any(that: contains(subCommand)),
           runInShell: true,
           workingDirectory: d.path,
+          environment: any(named: 'environment'),
         ),
       ).thenAnswer((_) async {
         final result = r[i < r.length ? i : r.length - 1];
@@ -404,6 +405,7 @@ void main() {
             any(that: contains('feature')),
             runInShell: any(named: 'runInShell'),
             workingDirectory: d.path,
+            environment: any(named: 'environment'),
           ),
         ).called(1);
       });
@@ -507,6 +509,7 @@ void main() {
               any(that: contains('list')),
               runInShell: true,
               workingDirectory: d.path,
+              environment: any(named: 'environment'),
             ),
           ).thenAnswer((_) async {
             polls++;
@@ -649,6 +652,7 @@ void main() {
               any(that: contains('list')),
               runInShell: true,
               workingDirectory: d.path,
+              environment: any(named: 'environment'),
             ),
           ).thenAnswer((_) async {
             polls++;

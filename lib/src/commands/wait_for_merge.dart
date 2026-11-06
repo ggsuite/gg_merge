@@ -290,6 +290,7 @@ class WaitForMerge extends DirCommand<bool> {
         arguments,
         runInShell: true,
         workingDirectory: directory.path,
+        environment: executable == 'az' ? azCliEnvironment : null,
       );
       if (result.exitCode == 0) {
         return result;

@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.8.5 - 2026-11-06
+
+### Fixed
+
+- Fix az CLI UTF-8 encoding, auto-generate ticket id/title/description, add only-PM-repo option, skip ticket cleanup prompt by default, stop auto-opening PR URLs
+- Code review and simplify fixes: guard malformed az JSON, fix tickets/ path and add retry/sanitization notes, dedupe ticket-cleanup persistence
+
 ## 3.8.4 - 2026-10-16
 
 ## 3.8.3 - 2026-10-06
