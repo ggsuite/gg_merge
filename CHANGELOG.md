@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.9.0 - 2026-11-14
+
+### Added
+
+- Add the blog post and describe the pull requests
+
+### Changed
+
+- Count new pull requests and wait out a rate limit
+
 ## 3.8.5 - 2026-11-06
 
 ### Fixed

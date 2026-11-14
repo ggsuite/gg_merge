@@ -1,0 +1,41 @@
+// @license
+// Copyright (c) ggsuite
+//
+// Use of this source code is governed by terms that can be
+// found in the LICENSE file in the root of this package.
+
+{
+  // The package name, as declared in pubspec.yaml / package.json.
+  "name": "gg_merge",
+
+  // 1-2 sentence summary about this repo.
+  "summary": "Merge tools for git repos: checks whether a branch can be merged, creates pull requests on GitHub and Azure DevOps with auto-merge, waits for the provider to merge, merges locally.",
+
+  // 1-3 bullet points: the problem space.
+  "domain": [
+    "merge preconditions: CanMerge, UpdateProjectGit, IsBehindMain, IsAheadMain, HasLocalReferences, HasGitReferences",
+    "pull requests: MergeGit (gh, az; reuse, auto-merge, retry after a rate limit), RequestLimit (80 new pull requests a minute, 500 an hour), WaitForMerge",
+    "merging: DoMerge, LocalMerge (squash)",
+  ],
+
+  // The repos this one depends on and the repos depending on it.
+  // Keep the reason or the API behind each entry, not just the name.
+  "interfaces": {
+    // "<repo-a>": "why / API"
+    "uses": {
+      "gg_git": "GitRetry for fetch, pull and the requests to a provider",
+      "gg_process": "GgProcessWrapper of git, gh and az",
+      "gg_args": "DirCommand base of the commands",
+      "gg_lang": "manifests of a repo when looking for git references",
+      "gg_status_printer": "progress output",
+      "gg_console_colors": "colored output",
+      "gg_log": "GgLog",
+    },
+
+    // "<repo-b>": "why / API"
+    "usedBy": {
+      "gg_one_merge": "CanMerge, MergeGit, WaitForMerge, LocalMerge behind the merge flow and CreatePullRequest",
+      "gg_one_do_publish": "merge step of a publish",
+    },
+  },
+}

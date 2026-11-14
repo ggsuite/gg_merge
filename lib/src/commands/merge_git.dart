@@ -9,12 +9,14 @@ import 'dart:io';
 
 import 'package:gg_args/gg_args.dart';
 import 'package:gg_console_colors/gg_console_colors.dart';
+import 'package:gg_git/gg_git.dart' show GitRetry;
 import 'package:gg_log/gg_log.dart';
 import 'package:gg_process/gg_process.dart';
 import 'package:gg_status_printer/gg_status_printer.dart';
 
 import '../util/azure_urls.dart';
 import '../util/command_helpers.dart';
+import '../util/request_limit.dart';
 
 /// Performs a merge/pull-request on GitHub or Azure DevOps.
 class MergeGit extends DirCommand<bool> {
@@ -22,13 +24,31 @@ class MergeGit extends DirCommand<bool> {
   MergeGit({
     required super.ggLog,
     this._processWrapper = const GgProcessWrapper(),
+    this._gitRetry = const GitRetry(),
+    RequestLimit? pullRequestLimit,
     super.name = 'merge-git',
     super.description = 'Create a pull request, optionally automerged',
-  }) {
+  }) : _pullRequestLimit = pullRequestLimit ?? RequestLimit.pullRequests {
     _addArgs();
   }
 
   final GgProcessWrapper _processWrapper;
+
+  /// Lets a pull request be created only when the provider takes one more:
+  /// it counts the new pull requests of a client per minute and per hour.
+  /// One limit for the whole process unless a caller brings its own —
+  /// however many pull requests are created at the same time, no more of
+  /// them start than the provider takes.
+  final RequestLimit _pullRequestLimit;
+
+  /// Repeats the requests that create or change a pull request when the
+  /// provider drops the connection or turns the request away with a rate
+  /// limit. A provider counts such requests per client and locks a client
+  /// out for a while when it sends too many; waiting is all that helps.
+  final GitRetry _gitRetry;
+
+  /// How the message of [_pullRequestLimit] calls what it counts.
+  static const String _newPullRequests = 'new pull requests';
 
   /// If --automerge is passed
   bool get _automergeOption => argResults?['automerge'] as bool? ?? false;
@@ -185,25 +205,33 @@ class MergeGit extends DirCommand<bool> {
       final urlHint = existingUrl.isEmpty ? '' : ' ${blue(existingUrl)}';
       ggLog('${cDetail('✓ Reusing existing pull request:')}$urlHint');
     } else {
-      final result = await _processWrapper.run(
-        'gh',
-        [
-          'pr',
-          'create',
-          // The merge message becomes the title; the body defaults to it when
-          // the caller has nothing more to say. Without a message gh derives
-          // both from the commits (--fill).
-          if (message != null) ...[
-            '--title',
-            message,
-            '--body',
-            body ?? message,
-          ],
-          if (message == null) '--fill',
-          '--web=false',
-        ],
-        runInShell: true,
-        workingDirectory: directory.path,
+      final result = await _gitRetry.run(
+        () async {
+          // Every attempt is a request the provider counts.
+          await _pullRequestLimit.start(ggLog: ggLog, what: _newPullRequests);
+          return _processWrapper.run(
+            'gh',
+            [
+              'pr',
+              'create',
+              // The merge message becomes the title; the body defaults to
+              // it when the caller has nothing more to say. Without a
+              // message gh derives both from the commits (--fill).
+              if (message != null) ...[
+                '--title',
+                message,
+                '--body',
+                body ?? message,
+              ],
+              if (message == null) '--fill',
+              '--web=false',
+            ],
+            runInShell: true,
+            workingDirectory: directory.path,
+          );
+        },
+        ggLog: ggLog,
+        description: 'gh pr create',
       );
       if (result.exitCode != 0) {
         throw Exception('gh pr create failed: ${result.stderr}');
@@ -218,18 +246,22 @@ class MergeGit extends DirCommand<bool> {
 
     // Merge if automerge
     if (automerge) {
-      final result = await _processWrapper.run(
-        'gh',
-        [
-          'pr',
-          'merge',
-          '--auto',
-          '--squash',
-          if (message != null) ...['--subject', message],
-          if (deleteSourceBranch) '--delete-branch',
-        ],
-        runInShell: true,
-        workingDirectory: directory.path,
+      final result = await _gitRetry.run(
+        () => _processWrapper.run(
+          'gh',
+          [
+            'pr',
+            'merge',
+            '--auto',
+            '--squash',
+            if (message != null) ...['--subject', message],
+            if (deleteSourceBranch) '--delete-branch',
+          ],
+          runInShell: true,
+          workingDirectory: directory.path,
+        ),
+        ggLog: ggLog,
+        description: 'gh pr merge',
       );
       // A failing `gh pr merge --auto` is not an error: auto-merge can be
       // unavailable (repo setting "Allow auto-merge" off, no branch
@@ -304,15 +336,23 @@ class MergeGit extends DirCommand<bool> {
       // Create the PR plain and set auto-complete separately: completion
       // options on `az repos pr create` fail as a whole when the policy
       // rejects the merge strategy, which would leave no PR at all.
-      final result = await _runAz(directory, [
-        'repos',
-        'pr',
-        'create',
-        '--source-branch',
-        'refs/heads/$branch',
-        if (message != null) ...['--title', message],
-        if (body != null) ...['--description', body],
-      ]);
+      final result = await _gitRetry.run(
+        () async {
+          // Every attempt is a request the provider counts.
+          await _pullRequestLimit.start(ggLog: ggLog, what: _newPullRequests);
+          return _runAz(directory, [
+            'repos',
+            'pr',
+            'create',
+            '--source-branch',
+            'refs/heads/$branch',
+            if (message != null) ...['--title', message],
+            if (body != null) ...['--description', body],
+          ]);
+        },
+        ggLog: ggLog,
+        description: 'az repos pr create',
+      );
       if (result.exitCode != 0) {
         throw Exception('az repos pr create failed: ${result.stderr}');
       }
