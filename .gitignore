@@ -10,6 +10,7 @@ build
 
 .aicode
 .gg/*
+!.gg/gg_rc
 !.gg/gg.json
 .gg/.gg-publish.json
 .gg/gg-publish.json

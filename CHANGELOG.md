@@ -2,14 +2,17 @@
 
 ## Unreleased
 
+### Added
+
+- Add the blog post and describe the pull requests
+
+Add the blog post of the change
+README: the limit of new pull requests
+Tighten the dependencies
+
 ### Changed
 
 - Count new pull requests and wait out a rate limit
-
-WaitForMerge asks after 2 s, 4 s and 8 s, then every poll interval: a pull request without required checks merges within seconds
-MergeGit repeats »gh pr create«, »az repos pr create« and »gh pr merge --auto« after a wait when the provider turns the request away with a rate limit
-RequestLimit lets no more than 80 pull requests a minute and 500 an hour be created, counted for the whole process; MergeGit asks it before every attempt
-Add index.jsonc
 
 ## 3.8.5 - 2026-11-06
 
