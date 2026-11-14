@@ -5,9 +5,11 @@
 // found in the LICENSE file in the root of this package.
 import 'dart:io';
 
+import 'package:gg_git/gg_git.dart' show GitRetry;
 import 'package:mocktail/mocktail.dart';
 import 'package:test/test.dart';
 import 'package:gg_merge/src/commands/merge_git.dart';
+import 'package:gg_merge/src/util/request_limit.dart';
 
 import '../helpers.dart';
 
@@ -996,6 +998,270 @@ void main() {
 
     // .........................................................................
     // Generic
+
+    // .........................................................................
+    // A provider counts the requests that create something per client and
+    // turns a client away for a while when it sends too many. Waiting is
+    // all that helps then — the request is right.
+    group('when the provider limits the requests', () {
+      const limited =
+          'HTTP 403: You have exceeded a secondary rate limit. Please wait a '
+          'few minutes before you try again.';
+
+      late MergeGit patient;
+
+      setUp(() {
+        // Retries like the default, without the minutes of waiting.
+        patient = MergeGit(
+          ggLog: ggLog,
+          processWrapper: processWrapper,
+          gitRetry: GitRetry.example,
+        );
+      });
+
+      /// Makes `gh pr create` answer with [results], one per call, the last
+      /// one for every further call. Returns the number of calls so far.
+      int Function() stubGhCreate(List<ProcessResult> results) {
+        var calls = 0;
+        when(
+          () => processWrapper.run(
+            'gh',
+            ['pr', 'create', '--fill', '--web=false'],
+            runInShell: true,
+            workingDirectory: d.path,
+          ),
+        ).thenAnswer(
+          (_) async =>
+              results[calls++ < results.length
+                  ? calls - 1
+                  : results.length - 1],
+        );
+        return () => calls;
+      }
+
+      void stubNoOpenGitHubPr() {
+        stubOriginUrl('https://github.com/me/repo.git');
+        stubCurrentBranch('feature');
+        stubGh([
+          'pr',
+          'list',
+          '--head',
+          'feature',
+          '--state',
+          'open',
+          '--json',
+          'url',
+          '--limit',
+          '1',
+        ], ProcessResult(0, 0, '[]', ''));
+      }
+
+      test('asks GitHub again and creates the pull request', () async {
+        stubNoOpenGitHubPr();
+        final calls = stubGhCreate([
+          ProcessResult(1, 1, '', limited),
+          ProcessResult(0, 0, 'https://github.com/me/repo/pull/7', ''),
+        ]);
+
+        final result = await patient.get(
+          directory: d,
+          ggLog: ggLog,
+          automerge: false,
+        );
+
+        expect(result, isTrue);
+        expect(calls(), 2);
+        expect(
+          messages,
+          contains(contains('gh pr create was turned away: the remote limits')),
+        );
+        expect(
+          messages,
+          contains(contains('https://github.com/me/repo/pull/7')),
+        );
+      });
+
+      test('gives up when GitHub keeps turning the request away', () async {
+        stubNoOpenGitHubPr();
+        final calls = stubGhCreate([ProcessResult(1, 1, '', limited)]);
+
+        await expectLater(
+          patient.get(directory: d, ggLog: ggLog, automerge: false),
+          throwsA(
+            isA<Exception>().having(
+              (e) => e.toString(),
+              'msg',
+              allOf(
+                contains('gh pr create failed'),
+                contains('secondary rate limit'),
+              ),
+            ),
+          ),
+        );
+
+        expect(calls(), GitRetry.example.attempts);
+      });
+
+      test('asks GitHub again to merge the pull request on its own', () async {
+        stubNoOpenGitHubPr();
+        stubGhCreate([
+          ProcessResult(0, 0, 'https://github.com/me/repo/pull/7', ''),
+        ]);
+        var merges = 0;
+        when(
+          () => processWrapper.run(
+            'gh',
+            any(that: contains('merge')),
+            runInShell: true,
+            workingDirectory: d.path,
+          ),
+        ).thenAnswer(
+          (_) async => merges++ == 0
+              ? ProcessResult(1, 1, '', limited)
+              : ProcessResult(0, 0, '', ''),
+        );
+
+        await patient.get(directory: d, ggLog: ggLog, automerge: true);
+
+        expect(merges, 2);
+        // The second answer was fine: nobody is told to merge by hand.
+        expect(messages, isNot(contains(contains('Auto-merge is not'))));
+      });
+
+      test('asks Azure DevOps again and creates the pull request', () async {
+        stubOriginUrl('https://dev.azure.com/you/project');
+        stubCurrentBranch('feature');
+        stubAz('list', ProcessResult(0, 0, '[]', ''));
+        var creates = 0;
+        when(
+          () => processWrapper.run(
+            'az',
+            any(that: contains('create')),
+            runInShell: true,
+            workingDirectory: d.path,
+            environment: any(named: 'environment'),
+          ),
+        ).thenAnswer(
+          (_) async => creates++ == 0
+              ? ProcessResult(1, 1, '', 'HTTP 429: Too Many Requests')
+              : ProcessResult(0, 0, '{"pullRequestId":99}', ''),
+        );
+
+        final result = await patient.get(
+          directory: d,
+          ggLog: ggLog,
+          automerge: false,
+        );
+
+        expect(result, isTrue);
+        expect(creates, 2);
+        expect(
+          messages,
+          contains(contains('az repos pr create was turned away')),
+        );
+      });
+
+      group('and gg counts the new pull requests itself', () {
+        const minute = Duration(minutes: 1);
+        late DateTime now;
+        late List<Duration> waits;
+        late MergeGit counting;
+
+        setUp(() {
+          now = DateTime(2026, 11, 14, 12);
+          waits = [];
+
+          // One new pull request a minute, on a clock only waiting moves.
+          counting = MergeGit(
+            ggLog: ggLog,
+            processWrapper: processWrapper,
+            gitRetry: GitRetry.example,
+            pullRequestLimit: RequestLimit(
+              limits: const [(within: minute, requests: 1)],
+              now: () => now,
+              wait: (duration) async {
+                waits.add(duration);
+                now = now.add(duration);
+              },
+            ),
+          );
+        });
+
+        test('creates a pull request on GitHub right away while the limit '
+            'allows it', () async {
+          stubNoOpenGitHubPr();
+          final calls = stubGhCreate([ProcessResult(0, 0, 'url', '')]);
+
+          await counting.get(directory: d, ggLog: ggLog, automerge: false);
+
+          expect(calls(), 1);
+          expect(waits, isEmpty);
+        });
+
+        test('waits before the next pull request on GitHub', () async {
+          stubNoOpenGitHubPr();
+          final calls = stubGhCreate([ProcessResult(0, 0, 'url', '')]);
+
+          await counting.get(directory: d, ggLog: ggLog, automerge: false);
+          await counting.get(directory: d, ggLog: ggLog, automerge: false);
+
+          expect(calls(), 2);
+          expect(waits, [minute]);
+          expect(
+            messages,
+            contains(contains('1 new pull requests started within a minute')),
+          );
+        });
+
+        test('counts every attempt to create a pull request', () async {
+          stubNoOpenGitHubPr();
+          final calls = stubGhCreate([
+            ProcessResult(1, 1, '', limited),
+            ProcessResult(0, 0, 'url', ''),
+          ]);
+
+          await counting.get(directory: d, ggLog: ggLog, automerge: false);
+
+          // The attempt GitHub turned away was a request as well.
+          expect(calls(), 2);
+          expect(waits, [minute]);
+        });
+
+        test('does not count a pull request that is there already', () async {
+          stubOriginUrl('https://github.com/me/repo.git');
+          stubCurrentBranch('feature');
+          stubGh([
+            'pr',
+            'list',
+            '--head',
+            'feature',
+            '--state',
+            'open',
+            '--json',
+            'url',
+            '--limit',
+            '1',
+          ], ProcessResult(0, 0, '[{"url":"https://x/pull/1"}]', ''));
+
+          await counting.get(directory: d, ggLog: ggLog, automerge: false);
+          await counting.get(directory: d, ggLog: ggLog, automerge: false);
+
+          expect(waits, isEmpty);
+        });
+
+        test('waits before the next pull request on Azure DevOps', () async {
+          stubOriginUrl('https://dev.azure.com/you/project');
+          stubCurrentBranch('feature');
+          stubAz('list', ProcessResult(0, 0, '[]', ''));
+          stubAz('create', ProcessResult(0, 0, '{"pullRequestId":99}', ''));
+
+          await counting.get(directory: d, ggLog: ggLog, automerge: false);
+          await counting.get(directory: d, ggLog: ggLog, automerge: false);
+
+          expect(waits, [minute]);
+        });
+      });
+    });
 
     test('throws UnimplementedError for unsupported provider', () async {
       stubOriginUrl('https://gitlab.com/xyz');

@@ -675,6 +675,84 @@ void main() {
     });
 
     // .........................................................................
+    // A pull request nothing holds back merges within seconds, so the first
+    // polls follow each other quickly. A fixed interval made every such
+    // merge cost a full interval.
+    group('pollDelay', () {
+      test('grows from two seconds to the poll interval', () {
+        expect(
+          [
+            for (var polls = 0; polls < 6; polls++)
+              waitForMerge.pollDelay(polls),
+          ],
+          const [
+            Duration(seconds: 2),
+            Duration(seconds: 4),
+            Duration(seconds: 8),
+            Duration(seconds: 15),
+            Duration(seconds: 15),
+            Duration(seconds: 15),
+          ],
+        );
+      });
+
+      test('stays at the poll interval however long the wait takes', () {
+        expect(waitForMerge.pollDelay(17), const Duration(seconds: 15));
+        expect(waitForMerge.pollDelay(100000), const Duration(seconds: 15));
+      });
+
+      test('never exceeds a poll interval shorter than two seconds', () {
+        final quick = WaitForMerge(
+          ggLog: ggLog,
+          processWrapper: processWrapper,
+          pollInterval: const Duration(seconds: 1),
+        );
+        expect(quick.pollDelay(0), const Duration(seconds: 1));
+        expect(quick.pollDelay(3), const Duration(seconds: 1));
+      });
+
+      for (final (provider, url, tool, open, merged) in [
+        (
+          'GitHub',
+          'https://github.com/me/repo.git',
+          'gh',
+          '[{"state":"OPEN"}]',
+          '[{"state":"MERGED"}]',
+        ),
+        (
+          'Azure DevOps',
+          'https://dev.azure.com/you/project',
+          'az',
+          '[{"pullRequestId":1,"status":"active"}]',
+          '[{"pullRequestId":1,"status":"completed"}]',
+        ),
+      ]) {
+        test('paces the polls of a $provider pull request', () async {
+          final delays = <Duration>[];
+          final waiting = WaitForMerge(
+            ggLog: ggLog,
+            processWrapper: processWrapper,
+            delay: (duration) async => delays.add(duration),
+          );
+          stubOriginUrl(url);
+          stubCurrentBranch('feature');
+          stubSequence(tool, 'list', [
+            for (var i = 0; i < 4; i++) ProcessResult(0, 0, open, ''),
+            ProcessResult(0, 0, merged, ''),
+          ]);
+
+          expect(await waiting.get(directory: d, ggLog: ggLog), isTrue);
+          expect(delays, const [
+            Duration(seconds: 2),
+            Duration(seconds: 4),
+            Duration(seconds: 8),
+            Duration(seconds: 15),
+          ]);
+        });
+      }
+    });
+
+    // .........................................................................
     group('generic', () {
       test('throws UnimplementedError for unsupported provider', () async {
         stubOriginUrl('https://gitlab.com/xyz');

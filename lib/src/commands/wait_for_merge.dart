@@ -22,9 +22,10 @@ import '../util/command_helpers.dart';
 /// Used after [MergeGit] created an auto-complete pull request: on providers
 /// that forbid direct pushes to `main` (e.g. Azure DevOps branch policies) the
 /// release cannot continue until the server merged the PR. This command blocks
-/// — polling in [pollInterval] steps — until the PR is completed/merged. It
-/// throws when the PR was abandoned/closed without merging. A poll that fails
-/// with a transient network error is simply repeated.
+/// — polling quickly at first, then in [pollInterval] steps (see
+/// [pollDelay]) — until the PR is completed/merged. It throws when the PR
+/// was abandoned/closed without merging. A poll that fails with a transient
+/// network error is simply repeated.
 ///
 /// A still-open pull request asks the user to merge it — once, together with
 /// the pull request url. The polling itself stays silent from there on.
@@ -42,6 +43,27 @@ class WaitForMerge extends DirCommand<bool> {
   final GgProcessWrapper _processWrapper;
   final Duration _pollInterval;
   final Future<void> Function(Duration) _delay;
+
+  /// The wait before the second poll, see [pollDelay].
+  static const Duration firstPollDelay = Duration(seconds: 2);
+
+  // ...........................................................................
+  /// How long to wait before the next poll, after [polls] polls that found
+  /// the pull request not merged yet.
+  ///
+  /// A pull request nothing holds back — no required checks, or checks that
+  /// passed before — merges within seconds, so the first polls follow each
+  /// other quickly: after 2 s, 4 s and 8 s. A pull request that is still
+  /// open then is waiting for the server, and the poll interval is short
+  /// enough from there on.
+  Duration pollDelay(int polls) {
+    // Beyond a few doublings the interval is reached anyway.
+    if (polls > 16) {
+      return _pollInterval;
+    }
+    final quick = firstPollDelay * (1 << polls);
+    return quick < _pollInterval ? quick : _pollInterval;
+  }
 
   @override
   Future<bool> exec({
@@ -116,8 +138,8 @@ class WaitForMerge extends DirCommand<bool> {
   /// reported and nothing is asked, because there is nothing to do.
   ///
   /// Called once per wait, not on every poll: gg has no way to speed the
-  /// merge up, so repeating the same line every [pollInterval] only buries
-  /// the rest of the publish output.
+  /// merge up, so repeating the same line with every poll only buries the
+  /// rest of the publish output.
   void _askToMerge(GgLog ggLog, String branch, String? url, bool autoMerge) {
     final target = url != null && url.isNotEmpty
         ? cCmd(url)
@@ -137,7 +159,7 @@ class WaitForMerge extends DirCommand<bool> {
     bool autoMerge,
   ) async {
     var asked = false;
-    while (true) {
+    for (var polls = 0; ; polls++) {
       final pr = await _azurePr(directory, branch, ggLog);
       final status = pr.status;
       if (status == 'completed') {
@@ -163,7 +185,7 @@ class WaitForMerge extends DirCommand<bool> {
         }
         _askToMerge(ggLog, branch, pr.url, autoMerge);
       }
-      await _delay(_pollInterval);
+      await _delay(pollDelay(polls));
     }
   }
 
@@ -226,7 +248,7 @@ class WaitForMerge extends DirCommand<bool> {
   ) async {
     var asked = false;
     var closedPolls = 0;
-    while (true) {
+    for (var polls = 0; ; polls++) {
       final pr = await _gitHubPr(directory, branch, ggLog);
       final state = pr.state;
       if (state == 'MERGED' || (state == 'CLOSED' && pr.merged)) {
@@ -244,7 +266,7 @@ class WaitForMerge extends DirCommand<bool> {
             'Pull request for $branch was closed without merging.',
           );
         }
-        await _delay(_pollInterval);
+        await _delay(pollDelay(polls));
         continue;
       }
       closedPolls = 0;
@@ -255,7 +277,7 @@ class WaitForMerge extends DirCommand<bool> {
         asked = true;
         _askToMerge(ggLog, branch, pr.url, autoMerge);
       }
-      await _delay(_pollInterval);
+      await _delay(pollDelay(polls));
     }
   }
 
