@@ -1,14 +1,10 @@
 # Changelog
 
-## Unreleased
+## 3.9.0 - 2026-11-14
 
 ### Added
 
 - Add the blog post and describe the pull requests
-
-Add the blog post of the change
-README: the limit of new pull requests
-Tighten the dependencies
 
 ### Changed
 
