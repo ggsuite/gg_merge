@@ -3,7 +3,7 @@ description: Various tools and checks for publishing dart packages, e.g. version
 version: 3.9.0
 repository: https://github.com/ggsuite/gg_merge.git
 environment:
-  sdk: ">=3.13.0 <4.0.0"
+  sdk: ">=3.14.0 <4.0.0"
 
 dependencies:
   args: ^2.7.0
@@ -11,7 +11,7 @@ dependencies:
   gg_args: ^3.2.1
   gg_console_colors: ^2.5.0
   gg_git: ^4.9.0
-  gg_is_flutter: ^2.2.5
+  gg_is_flutter: ^2.3.0
   gg_lang: ^0.8.4
   gg_log: ^1.2.0
   gg_process: ^1.5.0
@@ -25,10 +25,10 @@ dependencies:
   yaml: ^3.1.4
 
 dev_dependencies:
-  dna_ggsuite: ^1.0.2
+  dna_ggsuite: ^2.0.0
   fake_async: ^1.3.3
   gg_capture_print: ^1.2.1
-  helix: ^1.14.0
+  helix: ^1.15.2
   lints: ^6.1.0
   test: ^1.33.0
 
