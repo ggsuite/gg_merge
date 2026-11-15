@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Upgrade the SDK, the dependencies and the DNA
+
 ## 3.9.0 - 2026-11-14
 
 ### Added
