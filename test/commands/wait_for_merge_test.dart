@@ -60,13 +60,29 @@ void main() {
       ).thenAnswer((_) async => ProcessResult(0, 0, branch, ''));
     }
 
-    /// Returns the given results in sequence, repeating the last one.
+    /// Answers the policy lookup of an Azure DevOps pull request with
+    /// [policies] — no policy unless a test says otherwise.
+    void stubPolicies(String policies, {int exitCode = 0}) {
+      when(
+        () => processWrapper.run(
+          'az',
+          any(that: contains('policy')),
+          runInShell: true,
+          workingDirectory: d.path,
+          environment: any(named: 'environment'),
+        ),
+      ).thenAnswer((_) async => ProcessResult(0, exitCode, policies, ''));
+    }
+
+    /// Returns the given results in sequence, repeating the last one. The
+    /// policy lookup is answered by [stubPolicies] instead.
     void stubSequence(String tool, String subCommand, List<ProcessResult> r) {
+      stubPolicies('[]');
       var i = 0;
       when(
         () => processWrapper.run(
           tool,
-          any(that: contains(subCommand)),
+          any(that: allOf(contains(subCommand), isNot(contains('policy')))),
           runInShell: true,
           workingDirectory: d.path,
           environment: any(named: 'environment'),
@@ -750,6 +766,230 @@ void main() {
           ]);
         });
       }
+    });
+
+    // .........................................................................
+    group('a pull request that cannot merge', () {
+      Future<Object?> waitError() async {
+        try {
+          await waitForMerge.get(directory: d, ggLog: ggLog);
+          return null;
+        } catch (e) {
+          return e;
+        }
+      }
+
+      final merged = ProcessResult(0, 0, '[{"state":"MERGED"}]', '');
+
+      group('on GitHub', () {
+        ProcessResult open({
+          String mergeable = 'MERGEABLE',
+          String state = 'BLOCKED',
+        }) => ProcessResult(
+          0,
+          0,
+          '[{"state":"OPEN","url":"https://github.com/me/repo/pull/7",'
+              '"mergeable":"$mergeable","mergeStateStatus":"$state"}]',
+          '',
+        );
+
+        late List<List<String>> checkCalls;
+
+        /// Answers `gh pr checks --required` with [checks] and [exitCode].
+        void stubRequiredChecks(String checks, {int exitCode = 1}) {
+          when(
+            () => processWrapper.run(
+              'gh',
+              any(that: contains('checks')),
+              runInShell: true,
+              workingDirectory: d.path,
+            ),
+          ).thenAnswer((invocation) async {
+            checkCalls.add(invocation.positionalArguments[1] as List<String>);
+            return ProcessResult(0, exitCode, checks, '');
+          });
+        }
+
+        setUp(() {
+          checkCalls = [];
+          stubOriginUrl('https://github.com/me/repo.git');
+          stubCurrentBranch('feature');
+          stubRequiredChecks('[]', exitCode: 0);
+        });
+
+        test('fails on a merge conflict, naming the pull request', () async {
+          stubSequence('gh', 'list', [open(mergeable: 'CONFLICTING')]);
+          final error = '${await waitError()}';
+          expect(error, contains('cannot be merged: it has merge conflicts'));
+          expect(error, contains('https://github.com/me/repo/pull/7'));
+        });
+
+        test('fails when the branch has to be brought up to date', () async {
+          stubSequence('gh', 'list', [open(state: 'BEHIND')]);
+          expect(
+            '${await waitError()}',
+            contains('it is behind its base branch'),
+          );
+        });
+
+        test('fails when a required check failed, naming it', () async {
+          stubSequence('gh', 'list', [open()]);
+          stubRequiredChecks(
+            '[{"name":"test","bucket":"fail"},'
+            '{"name":"build","bucket":"pass"},'
+            '{"name":"lint","bucket":"fail"}]',
+          );
+          expect(
+            '${await waitError()}',
+            contains('a required check failed: test, lint'),
+          );
+          expect(checkCalls.first, [
+            'pr',
+            'checks',
+            'feature',
+            '--required',
+            '--json',
+            'name,bucket',
+          ]);
+        });
+
+        test('waits on while required checks run or a review is missing, '
+            'and for an optional failed check', () async {
+          stubSequence('gh', 'list', [
+            open(),
+            open(mergeable: 'UNKNOWN', state: 'UNKNOWN'),
+            open(state: 'UNSTABLE'),
+            merged,
+          ]);
+          stubRequiredChecks(
+            '[{"name":"test","bucket":"pending"},'
+            '{"name":"old","bucket":"cancel"}]',
+            exitCode: 8,
+          );
+          expect(await waitError(), isNull);
+          // Only a blocked pull request asks for its required checks.
+          expect(checkCalls, hasLength(1));
+        });
+
+        test('waits on when the checks cannot be read', () async {
+          stubSequence('gh', 'list', [open(), open(), open(), merged]);
+          stubRequiredChecks('no json');
+          expect(await waitError(), isNull);
+        });
+
+        test('waits on through a reason left over from the commit before '
+            'the push', () async {
+          stubSequence('gh', 'list', [
+            open(mergeable: 'CONFLICTING'),
+            open(mergeable: 'CONFLICTING'),
+            open(),
+            merged,
+          ]);
+          expect(await waitError(), isNull);
+        });
+      });
+
+      group('on Azure DevOps', () {
+        const build = '0609b952-1397-4640-95ec-e00a01b2c241';
+        const status = 'cbdc66da-9728-4af8-aada-9a5a32e4a226';
+        const reviewers = 'fa4e907d-c16b-4a4c-9dfa-4906e5d171dd';
+
+        ProcessResult open(String mergeStatus) => ProcessResult(
+          0,
+          0,
+          '[{"pullRequestId":5,"status":"active",'
+              '"mergeStatus":"$mergeStatus"}]',
+          '',
+        );
+
+        final completed = ProcessResult(
+          0,
+          0,
+          '[{"pullRequestId":5,"status":"completed"}]',
+          '',
+        );
+
+        String policy(
+          String type,
+          String status, {
+          bool blocking = true,
+          String? name,
+        }) =>
+            '{"status":"$status","configuration":{"isBlocking":$blocking,'
+            '"type":{"id":"$type"},'
+            '"settings":{${name == null ? '' : '"displayName":"$name"'}}}}';
+
+        setUp(() {
+          stubOriginUrl('https://dev.azure.com/you/project');
+          stubCurrentBranch('feature');
+        });
+
+        for (final (mergeStatus, reason) in [
+          ('conflicts', 'it has merge conflicts'),
+          ('failure', 'the merge failed'),
+          ('rejectedByPolicy', 'a branch policy rejected the merge'),
+        ]) {
+          test('fails on merge status $mergeStatus', () async {
+            stubSequence('az', 'list', [open(mergeStatus)]);
+            expect(
+              '${await waitError()}',
+              contains('cannot be merged: $reason'),
+            );
+          });
+        }
+
+        test('fails when a blocking build or status policy failed', () async {
+          stubSequence('az', 'list', [open('succeeded')]);
+          stubPolicies(
+            '[${policy(build, 'rejected', name: 'CI')},'
+            '${policy(status, 'broken')},'
+            '${policy(build, 'rejected', blocking: false, name: 'Lint')},'
+            '${policy(build, 'running', name: 'Tests')}]',
+          );
+          expect(
+            '${await waitError()}',
+            contains('a required policy failed: CI, Status'),
+          );
+        });
+
+        test('looks the policies up only once the merge succeeds', () async {
+          stubSequence('az', 'list', [open('queued'), completed]);
+          stubPolicies('[${policy(build, 'rejected')}]');
+          expect(await waitError(), isNull);
+          verifyNever(
+            () => processWrapper.run(
+              'az',
+              any(that: contains('policy')),
+              runInShell: true,
+              workingDirectory: d.path,
+              environment: any(named: 'environment'),
+            ),
+          );
+        });
+
+        test('waits on for reviewers and running policies', () async {
+          stubSequence('az', 'list', [open('succeeded'), completed]);
+          stubPolicies(
+            '[${policy(reviewers, 'rejected')},'
+            '${policy(build, 'running')},'
+            '{"status":"rejected","configuration":{"isBlocking":true}},'
+            '"not a map"]',
+          );
+          expect(await waitError(), isNull);
+        });
+
+        for (final (name, output, exitCode) in [
+          ('fails', '', 1),
+          ('prints no json', 'oops', 0),
+          ('prints no list', '{}', 0),
+        ]) {
+          test('waits on when the policy lookup $name', () async {
+            stubSequence('az', 'list', [open('succeeded'), completed]);
+            stubPolicies(output, exitCode: exitCode);
+            expect(await waitError(), isNull);
+          });
+        }
+      });
     });
 
     // .........................................................................

@@ -1,10 +1,11 @@
 # Changelog
 
-## Unreleased
+## 3.10.0 - 2026-11-24
 
 ### Changed
 
 - Upgrade the SDK, the dependencies and the DNA
+- Fail the wait for a pull request that cannot merge
 
 ## 3.9.0 - 2026-11-14
 

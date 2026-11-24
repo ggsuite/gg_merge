@@ -21,6 +21,29 @@ checks — merges within seconds, and a fixed interval made every such merge
 cost a full interval. A transient network error still waits a full interval
 before the lookup is repeated.
 
+There is no time limit: a pull request that only waits — running checks, a
+missing review — is waited for. But a pull request that **cannot merge
+without help** ends the wait with an error naming the pull request and the
+reason, once the reason shows in `stuckPollsBeforeGivingUp` (3) polls in a
+row — right after a push a provider may still report the commit before:
+
+- GitHub: `mergeable: CONFLICTING` / `mergeStateStatus: DIRTY` (conflict),
+  `BEHIND` (branch protection wants an up-to-date branch, auto-merge does
+  not update it), and for `BLOCKED` a required check in bucket `fail` of
+  `gh pr checks <branch> --required --json name,bucket` — only required
+  checks, latest run each, so a failed optional check or a cancelled and
+  replaced run is no reason. `gh pr checks` exits 1/8 with failed/pending
+  checks; its json is read regardless.
+- Azure DevOps: `mergeStatus` `conflicts`, `failure`, `rejectedByPolicy`,
+  and a blocking **build or status** policy (`_azureRunPolicyTypes`, by type
+  id) `rejected`/`broken` from `az repos pr policy list` — looked up only
+  while `mergeStatus` is `succeeded`, when nothing but a policy can hold the
+  pull request back. Reviewer and
+  comment policies also report `rejected` while votes are missing — they
+  are waited for.
+
+A failing lookup of checks or policies never ends the wait.
+
 # Creating a pull request
 
 `MergeGit` creates the pull request (`gh pr create`, `az repos pr create`)
