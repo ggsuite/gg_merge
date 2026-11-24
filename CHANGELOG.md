@@ -5,6 +5,10 @@
 ### Changed
 
 - Upgrade the SDK, the dependencies and the DNA
+- Fail the wait for a pull request that cannot merge
+
+WaitForMerge throws on merge conflicts and failed required checks or policies
+A pull request that only waits for checks or a review is still waited for
 
 ## 3.9.0 - 2026-11-14
 

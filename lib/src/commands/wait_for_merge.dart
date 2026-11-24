@@ -24,8 +24,15 @@ import '../util/command_helpers.dart';
 /// release cannot continue until the server merged the PR. This command blocks
 /// — polling quickly at first, then in [pollInterval] steps (see
 /// [pollDelay]) — until the PR is completed/merged. It throws when the PR
-/// was abandoned/closed without merging. A poll that fails with a transient
-/// network error is simply repeated.
+/// was abandoned/closed without merging, and when it cannot merge without
+/// help: a merge conflict, a failed required check or policy, a branch that
+/// must be brought up to date. Such a reason has to show in
+/// [stuckPollsBeforeGivingUp] polls in a row: right after a push the
+/// provider may still report the state of the commit before. A poll that
+/// fails with a transient network error is simply repeated.
+///
+/// A pull request that only waits — for its checks to finish, for a review —
+/// is waited for without a time limit: it merges once that is done.
 ///
 /// A still-open pull request asks the user to merge it — once, together with
 /// the pull request url. The polling itself stays silent from there on.
@@ -159,6 +166,7 @@ class WaitForMerge extends DirCommand<bool> {
     bool autoMerge,
   ) async {
     var asked = false;
+    var stuckPolls = 0;
     for (var polls = 0; ; polls++) {
       final pr = await _azurePr(directory, branch, ggLog);
       final status = pr.status;
@@ -172,6 +180,18 @@ class WaitForMerge extends DirCommand<bool> {
       if (status == null) {
         throw Exception(cError('No pull request found for branch $branch.'));
       }
+      stuckPolls = _countStuck(
+        stuckPolls,
+        branch: branch,
+        url: pr.url,
+        // A merge that succeeds on the server leaves only the policies to
+        // hold the pull request back — only then are they looked up.
+        reason:
+            _azureMergeStatusReason(pr.mergeStatus) ??
+            (pr.mergeStatus == 'succeeded'
+                ? await _azurePolicyReason(directory, pr.id)
+                : null),
+      );
       if (!asked) {
         asked = true;
         if (pr.url == null || pr.url!.isEmpty) {
@@ -189,7 +209,7 @@ class WaitForMerge extends DirCommand<bool> {
     }
   }
 
-  Future<({String? status, String? url})> _azurePr(
+  Future<_AzurePr> _azurePr(
     Directory directory,
     String branch,
     GgLog ggLog,
@@ -211,18 +231,10 @@ class WaitForMerge extends DirCommand<bool> {
         'json',
       ],
     );
-    final out = result.stdout.toString().trim();
-    if (out.isEmpty) {
-      return (status: null, url: null);
-    }
-    final decoded = jsonDecode(out);
-    if (decoded is! List || decoded.isEmpty) {
-      return (status: null, url: null);
-    }
     // Pick the newest PR (highest id) matching the branch.
     Map<dynamic, dynamic>? newest;
     var newestId = -1;
-    for (final entry in decoded) {
+    for (final entry in _jsonList(result.stdout) ?? const <dynamic>[]) {
       if (entry is Map && entry['pullRequestId'] is int) {
         final id = entry['pullRequestId'] as int;
         if (id > newestId) {
@@ -236,7 +248,108 @@ class WaitForMerge extends DirCommand<bool> {
     // from the repository it does report, the same way the review does.
     final url = newest == null ? null : azurePullRequestWebUrl(newest);
 
-    return (status: newest?['status']?.toString(), url: url);
+    return (
+      status: newest?['status']?.toString(),
+      url: url,
+      id: newest?['pullRequestId'] as int?,
+      mergeStatus: newest?['mergeStatus']?.toString(),
+    );
+  }
+
+  /// Why an Azure DevOps pull request with [mergeStatus] cannot merge, or
+  /// null when nothing in it says so.
+  ///
+  /// `conflicts`, `failure` and `rejectedByPolicy` are final: the server does
+  /// not retry the merge before somebody changed the branch or the policy.
+  static String? _azureMergeStatusReason(String? mergeStatus) =>
+      switch (mergeStatus) {
+        'conflicts' => 'it has merge conflicts',
+        'failure' => 'the merge failed',
+        'rejectedByPolicy' => 'a branch policy rejected the merge',
+        _ => null,
+      };
+
+  /// Why a blocking build or status policy of the Azure DevOps pull request
+  /// [id] keeps it from merging, or null when none does.
+  ///
+  /// Only those two policy types count: their `rejected` is a failed run.
+  /// Reviewer and comment policies report `rejected` as well while a vote or
+  /// a resolved comment is missing — that is a review still to come, which
+  /// is waited for. A policy that is running, queued or approved is no
+  /// reason either. The policies are an extra lookup; when it fails the wait
+  /// goes on — it only ends a hopeless wait early.
+  Future<String?> _azurePolicyReason(Directory directory, int? id) async {
+    if (id == null) {
+      return null;
+    }
+    final result = await _processWrapper.run(
+      'az',
+      ['repos', 'pr', 'policy', 'list', '--id', '$id', '--output', 'json'],
+      runInShell: true,
+      workingDirectory: directory.path,
+      environment: azCliEnvironment,
+    );
+    final evaluations = result.exitCode == 0 ? _jsonList(result.stdout) : null;
+    final failed = [
+      for (final evaluation in evaluations ?? const <dynamic>[])
+        if (evaluation
+            case {
+              'status': 'rejected' || 'broken',
+              'configuration':
+                  {'isBlocking': true, 'type': {'id': final String typeId}} &&
+                  final Map<dynamic, dynamic> configuration,
+            }
+            when _azureRunPolicyTypes.containsKey(typeId))
+          '${switch (configuration['settings']) {
+            {'displayName': final Object name} => name,
+            _ => _azureRunPolicyTypes[typeId],
+          }}',
+    ];
+    return failed.isEmpty
+        ? null
+        : 'a required policy failed: ${failed.join(', ')}';
+  }
+
+  /// The Azure DevOps policy types whose `rejected` means a failed run, by
+  /// their fixed type id.
+  static const _azureRunPolicyTypes = {
+    '0609b952-1397-4640-95ec-e00a01b2c241': 'Build',
+    'cbdc66da-9728-4af8-aada-9a5a32e4a226': 'Status',
+  };
+
+  /// The json array in [stdout], or null when it holds something else.
+  static List<dynamic>? _jsonList(Object? stdout) {
+    try {
+      final decoded = jsonDecode('$stdout'.trim());
+      return decoded is List ? decoded : null;
+    } on FormatException {
+      return null;
+    }
+  }
+
+  /// Counts one more poll that found [reason] the pull request of [branch]
+  /// cannot merge — or resets the count when there is none — and returns
+  /// the new count. Throws once the reason showed in
+  /// [stuckPollsBeforeGivingUp] polls in a row.
+  static int _countStuck(
+    int stuckPolls, {
+    required String branch,
+    required String? url,
+    required String? reason,
+  }) {
+    if (reason == null) {
+      return 0;
+    }
+    if (stuckPolls + 1 < stuckPollsBeforeGivingUp) {
+      return stuckPolls + 1;
+    }
+    throw Exception(
+      cError(
+        'The pull request for $branch cannot be merged: $reason. '
+        '${url == null || url.isEmpty ? '' : 'See $url. '}'
+        'Fix it on the branch, then wait for the merge again.',
+      ),
+    );
   }
 
   // ...........................................................................
@@ -248,6 +361,7 @@ class WaitForMerge extends DirCommand<bool> {
   ) async {
     var asked = false;
     var closedPolls = 0;
+    var stuckPolls = 0;
     for (var polls = 0; ; polls++) {
       final pr = await _gitHubPr(directory, branch, ggLog);
       final state = pr.state;
@@ -273,6 +387,19 @@ class WaitForMerge extends DirCommand<bool> {
       if (state == null) {
         throw Exception('No pull request found for branch $branch.');
       }
+      stuckPolls = _countStuck(
+        stuckPolls,
+        branch: branch,
+        url: pr.url,
+        reason:
+            _gitHubMergeStateReason(
+              mergeable: pr.mergeable,
+              mergeStateStatus: pr.mergeStateStatus,
+            ) ??
+            (pr.mergeStateStatus == 'BLOCKED'
+                ? await _gitHubRequiredCheckReason(directory, branch)
+                : null),
+      );
       if (!asked) {
         asked = true;
         _askToMerge(ggLog, branch, pr.url, autoMerge);
@@ -280,6 +407,63 @@ class WaitForMerge extends DirCommand<bool> {
       await _delay(pollDelay(polls));
     }
   }
+
+  /// Why an open GitHub pull request cannot merge without help, as far as
+  /// its [mergeable] and [mergeStateStatus] tell, or null when they do not.
+  ///
+  /// - `CONFLICTING` / `DIRTY`: the branch conflicts with its base.
+  /// - `BEHIND`: the branch protection wants the branch up to date with its
+  ///   base, and auto-merge does not update it.
+  ///
+  /// `BLOCKED` is decided by the required checks (see
+  /// [_gitHubRequiredCheckReason]); everything else — `UNKNOWN` not computed
+  /// yet, `UNSTABLE` with a failed optional check — is waited for.
+  static String? _gitHubMergeStateReason({
+    required String? mergeable,
+    required String? mergeStateStatus,
+  }) {
+    if (mergeable == 'CONFLICTING' || mergeStateStatus == 'DIRTY') {
+      return 'it has merge conflicts';
+    }
+    if (mergeStateStatus == 'BEHIND') {
+      return 'it is behind its base branch and has to be updated';
+    }
+    return null;
+  }
+
+  /// Why a required check keeps the pull request of [branch] from merging —
+  /// the names of the required checks that failed — or null when none did.
+  ///
+  /// `gh pr checks --required` lists only the checks the branch protection
+  /// requires, the latest run of each: a failed optional check, or a run
+  /// cancelled and replaced by a newer one, is no reason. A pending check is
+  /// waited for. When the lookup fails the wait goes on — it only ends a
+  /// hopeless wait early.
+  Future<String?> _gitHubRequiredCheckReason(
+    Directory directory,
+    String branch,
+  ) async {
+    final result = await _processWrapper.run(
+      'gh',
+      ['pr', 'checks', branch, '--required', '--json', 'name,bucket'],
+      runInShell: true,
+      workingDirectory: directory.path,
+    );
+    // `gh pr checks` ends with 1 when a check failed and 8 while one is
+    // pending — the json it prints is valid either way.
+    final failed = [
+      for (final check in _jsonList(result.stdout) ?? const <dynamic>[])
+        if (check is Map && check['bucket'] == 'fail') '${check['name']}',
+    ];
+    return failed.isEmpty
+        ? null
+        : 'a required check failed: ${failed.join(', ')}';
+  }
+
+  /// How many polls in a row must show a reason the pull request cannot
+  /// merge before the wait gives up: right after a push the provider may
+  /// still report the state of the commit before.
+  static const int stuckPollsBeforeGivingUp = 3;
 
   /// How many consecutive `CLOSED` polls a GitHub pull request may show
   /// before it counts as closed without merging — see [_waitGitHub].
@@ -332,10 +516,11 @@ class WaitForMerge extends DirCommand<bool> {
     }
   }
 
-  /// The state of the pull request of [branch]: its `state`, its web url and
+  /// The state of the pull request of [branch]: its `state`, its web url,
   /// whether GitHub has a merge date for it — a `CLOSED` pull request with
-  /// one was merged, whatever the state says.
-  Future<({String? state, String? url, bool merged})> _gitHubPr(
+  /// one was merged, whatever the state says — and what
+  /// [_gitHubMergeStateReason] needs to tell whether it can still merge.
+  Future<_GitHubPr> _gitHubPr(
     Directory directory,
     String branch,
     GgLog ggLog,
@@ -353,31 +538,48 @@ class WaitForMerge extends DirCommand<bool> {
         '--state',
         'all',
         '--json',
-        'state,url,mergedAt',
+        'state,url,mergedAt,mergeable,mergeStateStatus',
         '--limit',
         '1',
       ],
     );
-    final out = result.stdout.toString().trim();
-    if (out.isEmpty) {
-      return (state: null, url: null, merged: false);
-    }
-    final decoded = jsonDecode(out);
-    if (decoded is! List || decoded.isEmpty) {
-      return (state: null, url: null, merged: false);
-    }
-    final first = decoded.first;
-    if (first is Map) {
-      final mergedAt = first['mergedAt']?.toString() ?? '';
+    final first = _jsonList(result.stdout)?.firstOrNull;
+    if (first is! Map) {
       return (
-        state: first['state']?.toString(),
-        url: first['url']?.toString(),
-        merged: mergedAt.isNotEmpty && mergedAt != 'null',
+        state: null,
+        url: null,
+        merged: false,
+        mergeable: null,
+        mergeStateStatus: null,
       );
     }
-    return (state: null, url: null, merged: false);
+    final mergedAt = first['mergedAt']?.toString() ?? '';
+    return (
+      state: first['state']?.toString(),
+      url: first['url']?.toString(),
+      merged: mergedAt.isNotEmpty && mergedAt != 'null',
+      mergeable: first['mergeable']?.toString(),
+      mergeStateStatus: first['mergeStateStatus']?.toString(),
+    );
   }
 }
+
+/// An Azure DevOps pull request as [WaitForMerge] polls it.
+typedef _AzurePr = ({
+  String? status,
+  String? url,
+  int? id,
+  String? mergeStatus,
+});
+
+/// A GitHub pull request as [WaitForMerge] polls it.
+typedef _GitHubPr = ({
+  String? state,
+  String? url,
+  bool merged,
+  String? mergeable,
+  String? mergeStateStatus,
+});
 
 /// Mock for unit tests
 class MockWaitForMerge extends MockDirCommand<bool> implements WaitForMerge {}

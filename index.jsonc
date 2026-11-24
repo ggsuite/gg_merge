@@ -14,7 +14,7 @@
   // 1-3 bullet points: the problem space.
   "domain": [
     "merge preconditions: CanMerge, UpdateProjectGit, IsBehindMain, IsAheadMain, HasLocalReferences, HasGitReferences",
-    "pull requests: MergeGit (gh, az; reuse, auto-merge, retry after a rate limit), RequestLimit (80 new pull requests a minute, 500 an hour), WaitForMerge",
+    "pull requests: MergeGit (gh, az; reuse, auto-merge, retry after a rate limit), RequestLimit (80 new pull requests a minute, 500 an hour), WaitForMerge (fails on conflicts, BEHIND, failed required checks / build+status policies)",
     "merging: DoMerge, LocalMerge (squash)",
   ],
 
